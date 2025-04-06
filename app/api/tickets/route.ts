@@ -236,6 +236,57 @@ const getShopIdFromOrigin = async (origin: string): Promise<string | null> => {
   }
 };
 
+// Function to ensure a shop exists in the database
+const ensureShopExists = async (shopId: string): Promise<string | null> => {
+  console.log(`ensureShopExists called with shopId: ${shopId}`);
+
+  try {
+    // Check if the shop already exists
+    console.log("Checking if shop exists in database:", shopId);
+    const existingShop = await db.query.shops.findFirst({
+      where: eq(shops.id, shopId),
+    });
+
+    if (existingShop) {
+      console.log(
+        "Shop found in database:",
+        JSON.stringify(existingShop, null, 2)
+      );
+      return shopId;
+    }
+
+    // If the shop doesn't exist, create it
+    console.log("Shop not found in database, creating it");
+    const now = new Date().toISOString();
+    const newShop = {
+      id: shopId,
+      name: shopId, // Use the ID as the name for now
+      domain: `${shopId}.myshopify.com`,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    };
+    console.log(
+      "Creating new shop with data:",
+      JSON.stringify(newShop, null, 2)
+    );
+
+    await db.insert(shops).values(newShop);
+    console.log(`Created new shop: ${shopId}`);
+    return shopId;
+  } catch (error) {
+    console.error(`Error ensuring shop exists: ${error}`);
+    if (error instanceof Error) {
+      console.error("Error details:", {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+      });
+    }
+    return null;
+  }
+};
+
 const corsHeaders = async (
   origin: string | null
 ): Promise<Record<string, string>> => {
@@ -360,6 +411,20 @@ export async function POST(request: NextRequest) {
       console.log("No shopId provided, attempting to get from origin:", origin);
       shopId = await getShopIdFromOrigin(origin);
       console.log(`Shop ID from origin: ${shopId}`);
+    }
+
+    // If shopId is provided but it's a full domain, extract just the shop name
+    if (shopId && shopId.includes(".myshopify.com")) {
+      console.log("ShopId is a full domain, extracting shop name");
+      shopId = shopId.split(".")[0];
+      console.log("Extracted shop name:", shopId);
+    }
+
+    // Ensure the shop exists in the database
+    if (shopId) {
+      console.log("Ensuring shop exists in database:", shopId);
+      shopId = await ensureShopExists(shopId);
+      console.log("Shop ID after ensuring existence:", shopId);
     }
 
     // Create ticket with or without shop ID
