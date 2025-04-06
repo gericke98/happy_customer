@@ -1,30 +1,9 @@
 import { NextResponse } from "next/server";
-import { trackOrder } from "../queries/order";
-import { updateTicketWithOrderInfo } from "../actions/tickets";
-import { aiService } from "./ai";
 import { NextRequest } from "next/server";
-import { getMessages } from "@/app/actions/tickets";
-import {
-  handleChangeDelivery,
-  handleDeliveryIssue,
-  handleInvoiceRequest,
-  handleProductInquiry,
-  handleProductInquiryRestock,
-  handlePromoCode,
-  handleUpdateOrder,
-  InvalidCredentials,
-  NoOrderNumberOrEmail,
-  handleOrderTracking,
-  handleReturnsExchange,
-} from "./intents";
-import { handleError, APIError, createRequestId } from "./utils/error-handler";
-import { logger } from "./utils/logger";
-import {
-  ClassifiedMessage,
-  Intent,
-  MessageParameters,
-  APIResponse,
-} from "@/app/types/api";
+import { aiService } from "../ai";
+import { handleError, APIError, createRequestId } from "../utils/error-handler";
+import { logger } from "../utils/logger";
+import { ClassifiedMessage } from "@/app/types/api";
 import { eq, and } from "drizzle-orm";
 import { allowedOrigins, shops } from "@/db/schema";
 import db from "@/db/drizzle";
@@ -201,53 +180,11 @@ export async function OPTIONS(request: NextRequest) {
   });
 }
 
-export async function GET(request: NextRequest) {
-  const requestId = createRequestId();
-  const origin = request.headers.get("origin");
-  logger.info(
-    "Received GET request",
-    { path: request.nextUrl.pathname },
-    requestId
-  );
-
-  try {
-    const ticketId = request.nextUrl.searchParams.get("ticketId");
-
-    if (!ticketId) {
-      throw new APIError(
-        "Missing ticketId parameter",
-        400,
-        "MISSING_PARAMETER"
-      );
-    }
-
-    const messages = await getMessages(ticketId);
-    logger.info("Retrieved messages successfully", { ticketId }, requestId);
-
-    return NextResponse.json<APIResponse>(
-      {
-        data: { messages },
-        requestId,
-        timestamp: new Date().toISOString(),
-      },
-      { headers: await corsHeaders(origin) }
-    );
-  } catch (error) {
-    logger.error(
-      "Error in GET request",
-      error as Error,
-      { path: request.nextUrl.pathname },
-      requestId
-    );
-    return handleError(error, requestId, origin);
-  }
-}
-
 export async function POST(req: NextRequest): Promise<Response> {
   const requestId = createRequestId();
   const origin = req.headers.get("origin");
   logger.info(
-    "Received POST request",
+    "Received POST request for classification",
     { path: req.nextUrl.pathname },
     requestId
   );
@@ -272,7 +209,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       throw new APIError("Invalid JSON in request body", 400, "INVALID_JSON");
     }
 
-    const { message, context, currentTicket } = body;
+    const { message, context } = body;
 
     // Validate required fields
     if (!message || typeof message !== "string") {
@@ -304,179 +241,43 @@ export async function POST(req: NextRequest): Promise<Response> {
       shopId = await getShopIdFromOrigin(origin);
     }
 
-    // Call the classification API
-    logger.debug("Calling classification API", { message }, requestId);
-    const classificationResponse = await fetch(
-      `${req.nextUrl.origin}/api/classify`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ message, context }),
-      }
-    );
-
-    if (!classificationResponse.ok) {
-      const errorData = await classificationResponse.json();
-      throw new APIError(
-        errorData.error || "Classification failed",
-        classificationResponse.status,
-        errorData.code || "CLASSIFICATION_ERROR"
-      );
-    }
-
-    const classificationData = await classificationResponse.json();
-    const classification = classificationData.data
-      .classification as ClassifiedMessage;
-
-    logger.logIntentClassification(message, classification, requestId);
-    const { intent, parameters, language } = classification;
-
-    // Handle ticket updates
-    if (
-      currentTicket?.id &&
-      parameters.order_number &&
-      parameters.email &&
-      (!currentTicket.orderNumber || !currentTicket.email)
-    ) {
-      if (!parameters.order_number || !parameters.email) {
-        return NextResponse.json<APIResponse>(
-          {
-            data: { response: await NoOrderNumberOrEmail(language) },
-            requestId,
-            timestamp: new Date().toISOString(),
-          },
-          { headers: await corsHeaders(origin) }
-        );
-      }
-
-      const shopifyData = await trackOrder(
-        parameters.order_number,
-        parameters.email
-      );
-
-      if (!shopifyData.success) {
-        logger.warn(
-          "Invalid credentials",
-          {
-            orderNumber: parameters.order_number,
-            error: shopifyData.error,
-          },
-          requestId
-        );
-
-        return NextResponse.json<APIResponse>(
-          {
-            data: {
-              response: await InvalidCredentials(language, shopifyData.error),
-            },
-            requestId,
-            timestamp: new Date().toISOString(),
-          },
-          { headers: await corsHeaders(origin) }
-        );
-      }
-
-      await updateTicketWithOrderInfo(
-        currentTicket.id,
-        parameters.order_number,
-        parameters.email,
-        shopifyData.order?.customer
-      );
-      logger.info(
-        "Updated ticket with order info",
-        {
-          ticketId: currentTicket.id,
-          orderNumber: parameters.order_number,
-        },
-        requestId
-      );
-    }
-
-    // Process intent with timeout
-    const intentHandler = async (
-      intent: Intent,
-      parameters: MessageParameters
-    ) => {
-      logger.debug("Processing intent", { intent, parameters }, requestId);
-      switch (intent) {
-        case "order_tracking":
-          return handleOrderTracking(parameters, context, language);
-        case "returns_exchange":
-          return handleReturnsExchange(language);
-        case "delivery_issue":
-          return handleDeliveryIssue(parameters, message, context, language);
-        case "change_delivery":
-          return handleChangeDelivery(parameters, message, context, language);
-        case "product_sizing":
-          return handleProductInquiry(parameters, message, context, language);
-        case "update_order":
-          return handleUpdateOrder(parameters, message, context, language);
-        case "restock":
-          return handleProductInquiryRestock(parameters, language);
-        case "promo_code":
-          return handlePromoCode(parameters, language);
-        case "invoice_request":
-          return handleInvoiceRequest(parameters, language);
-        case "other-order":
-          if (!parameters.order_number || !parameters.email) {
-            return language === "Spanish"
-              ? "Para ayudarte mejor con tu consulta sobre el pedido, necesito el número de pedido (tipo #12345) y tu email 😊"
-              : "To better help you with your order-related query, I need your order number (like #12345) and email 😊";
-          }
-          const orderData = await trackOrder(
-            parameters.order_number,
-            parameters.email
-          );
-          return aiService.generateFinalAnswer(
-            intent,
-            parameters,
-            orderData,
-            message,
-            context,
-            language
-          );
-        default:
-          return aiService.generateFinalAnswer(
-            intent,
-            parameters,
-            null,
-            message,
-            context,
-            language
-          );
-      }
-    };
-
-    const response = await Promise.race([
-      intentHandler(intent, parameters),
+    // Message classification with timeout
+    logger.debug("Starting message classification", { message }, requestId);
+    const classificationPromise = aiService.classifyMessage(message, context);
+    const classification = (await Promise.race([
+      classificationPromise,
       new Promise<never>((_, reject) =>
         setTimeout(
           () =>
             reject(
               new APIError(
-                "Intent processing timeout",
+                "Classification timeout",
                 408,
-                "INTENT_PROCESSING_TIMEOUT"
+                "CLASSIFICATION_TIMEOUT"
               )
             ),
           30000
         )
       ),
-    ]);
+    ])) as ClassifiedMessage;
+
+    logger.logIntentClassification(message, classification, requestId);
 
     logger.info(
-      "Successfully processed request",
+      "Successfully classified message",
       {
-        intent,
+        intent: classification.intent,
         shopId: shopId || "unknown",
       },
       requestId
     );
-    return NextResponse.json<APIResponse>(
+
+    return NextResponse.json(
       {
-        data: { response },
+        data: {
+          classification,
+          shopId,
+        },
         requestId,
         timestamp: new Date().toISOString(),
       },
@@ -484,7 +285,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     );
   } catch (error) {
     logger.error(
-      "Error in POST request",
+      "Error in classification request",
       error as Error,
       { path: req.nextUrl.pathname },
       requestId
