@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { NextRequest } from "next/server";
 import db from "@/db/drizzle";
-import { tickets, messages, allowedOrigins } from "@/db/schema";
+import { tickets, messages, allowedOrigins, shops } from "@/db/schema";
 import { z } from "zod";
 import { handleError } from "../utils/error-handler";
 import { eq, and } from "drizzle-orm";
@@ -13,6 +13,40 @@ const MANUALLY_ALLOWED_ORIGINS = [
   "https://shameless-test.myshopify.com",
   "https://shameless-test.myshopify.com/",
 ];
+
+// Function to ensure a shop exists in the database
+const ensureShopExists = async (
+  shopId: string,
+  domain: string
+): Promise<string> => {
+  try {
+    // Check if the shop already exists
+    const existingShop = await db.query.shops.findFirst({
+      where: eq(shops.id, shopId),
+    });
+
+    if (existingShop) {
+      return shopId;
+    }
+
+    // If the shop doesn't exist, create it
+    const now = new Date().toISOString();
+    await db.insert(shops).values({
+      id: shopId,
+      name: shopId, // Use the ID as the name for now
+      domain: domain,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    console.log(`Created new shop: ${shopId}`);
+    return shopId;
+  } catch (error) {
+    console.error(`Error ensuring shop exists: ${error}`);
+    return shopId; // Return the ID even if there was an error
+  }
+};
 
 // Function to check if an origin is allowed
 const isAllowedOrigin = async (origin: string): Promise<boolean> => {
@@ -42,9 +76,19 @@ const isAllowedOrigin = async (origin: string): Promise<boolean> => {
 
 // Function to get shop ID from origin
 const getShopIdFromOrigin = async (origin: string): Promise<string | null> => {
-  // For manually allowed origins, return a default shop ID
+  // For manually allowed origins, extract the shop ID from the domain
   if (MANUALLY_ALLOWED_ORIGINS.includes(origin)) {
-    return "shameless-test";
+    try {
+      const url = new URL(origin);
+      const domain = url.hostname;
+      const shopId = domain.split(".")[0]; // Extract shop ID from domain (e.g., "shameless-test" from "shameless-test.myshopify.com")
+
+      // Ensure the shop exists in the database
+      return await ensureShopExists(shopId, domain);
+    } catch (error) {
+      console.error("Error extracting shop ID from origin:", error);
+      return null;
+    }
   }
 
   try {
@@ -136,7 +180,8 @@ export async function POST(request: NextRequest) {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         admin: validatedMessage.admin || false,
-        shopId: shopId || undefined,
+        // Only include shopId if it's not null
+        ...(shopId ? { shopId } : {}),
       })
       .returning();
 
