@@ -8,8 +8,19 @@ import { eq, and } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
+// Manually allowed origins (temporary solution)
+const MANUALLY_ALLOWED_ORIGINS = [
+  "https://shameless-test.myshopify.com",
+  "https://shameless-test.myshopify.com/",
+];
+
 // Function to check if an origin is allowed
 const isAllowedOrigin = async (origin: string): Promise<boolean> => {
+  // First check if it's in our manually allowed origins
+  if (MANUALLY_ALLOWED_ORIGINS.includes(origin)) {
+    return true;
+  }
+
   try {
     const allowedOrigin = await db.query.allowedOrigins.findFirst({
       where: and(
@@ -31,6 +42,11 @@ const isAllowedOrigin = async (origin: string): Promise<boolean> => {
 
 // Function to get shop ID from origin
 const getShopIdFromOrigin = async (origin: string): Promise<string | null> => {
+  // For manually allowed origins, return a default shop ID
+  if (MANUALLY_ALLOWED_ORIGINS.includes(origin)) {
+    return "shameless-test";
+  }
+
   try {
     const allowedOrigin = await db.query.allowedOrigins.findFirst({
       where: and(
