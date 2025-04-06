@@ -305,14 +305,11 @@ export async function POST(req: NextRequest): Promise<Response> {
       requestId
     );
 
+    // Return only the classification intent and parameters
     return NextResponse.json(
       {
-        data: {
-          classification,
-          shopId,
-        },
-        requestId,
-        timestamp: new Date().toISOString(),
+        intent: classification.intent,
+        parameters: classification.parameters,
       },
       { headers: await corsHeaders(origin) }
     );
