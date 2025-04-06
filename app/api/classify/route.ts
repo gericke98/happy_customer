@@ -204,7 +204,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     let body;
     try {
       body = await req.json();
-      console.log("Received request body:", JSON.stringify(body));
+      console.log("Received request body:", JSON.stringify(body, null, 2));
     } catch (error) {
       logger.error("Error parsing request body", error as Error, {}, requestId);
       throw new APIError("Invalid JSON in request body", 400, "INVALID_JSON");
@@ -217,6 +217,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     if (body.message && typeof body.message === "string") {
       message = body.message;
       context = body.context;
+      console.log("Using Format 1: { message: '...' }");
     }
     // Format 2: { message: { text: "..." } }
     else if (
@@ -226,15 +227,17 @@ export async function POST(req: NextRequest): Promise<Response> {
     ) {
       message = body.message.text;
       context = body.context;
+      console.log("Using Format 2: { message: { text: '...' } }");
     }
     // Format 3: { text: "..." }
     else if (body.text && typeof body.text === "string") {
       message = body.text;
       context = body.context;
+      console.log("Using Format 3: { text: '...' }");
     }
     // Invalid format
     else {
-      console.error("Invalid request format:", JSON.stringify(body));
+      console.error("Invalid request format:", JSON.stringify(body, null, 2));
       throw new APIError(
         "Invalid request format. Expected { message: '...' } or { message: { text: '...' } } or { text: '...' }",
         400,
@@ -244,12 +247,19 @@ export async function POST(req: NextRequest): Promise<Response> {
 
     // Validate required fields
     if (!message || typeof message !== "string") {
+      console.error("Invalid message:", message);
       throw new APIError(
         "Message must be a non-empty string",
         400,
         "INVALID_MESSAGE"
       );
     }
+
+    console.log("Message to classify:", message);
+    console.log(
+      "Context:",
+      context ? JSON.stringify(context, null, 2) : "No context provided"
+    );
 
     // Validate context if provided
     if (
@@ -263,6 +273,10 @@ export async function POST(req: NextRequest): Promise<Response> {
             typeof item.content === "string"
         ))
     ) {
+      console.error(
+        "Invalid context format:",
+        JSON.stringify(context, null, 2)
+      );
       throw new APIError("Invalid context format", 400, "INVALID_CONTEXT");
     }
 
@@ -276,6 +290,8 @@ export async function POST(req: NextRequest): Promise<Response> {
 
     // Message classification with timeout
     logger.debug("Starting message classification", { message }, requestId);
+    console.log("Calling aiService.classifyMessage with message:", message);
+
     const classificationPromise = aiService.classifyMessage(message, context);
     const classification = (await Promise.race([
       classificationPromise,
@@ -294,6 +310,34 @@ export async function POST(req: NextRequest): Promise<Response> {
       ),
     ])) as ClassifiedMessage;
 
+    console.log(
+      "Classification result:",
+      JSON.stringify(classification, null, 2)
+    );
+
+    if (!classification) {
+      console.error("Classification is undefined or null");
+      throw new APIError("Classification failed", 500, "CLASSIFICATION_FAILED");
+    }
+
+    if (!classification.intent) {
+      console.error("Classification intent is undefined or null");
+      throw new APIError(
+        "Classification intent is missing",
+        500,
+        "CLASSIFICATION_INTENT_MISSING"
+      );
+    }
+
+    if (!classification.parameters) {
+      console.error("Classification parameters is undefined or null");
+      throw new APIError(
+        "Classification parameters is missing",
+        500,
+        "CLASSIFICATION_PARAMETERS_MISSING"
+      );
+    }
+
     logger.logIntentClassification(message, classification, requestId);
 
     logger.info(
@@ -306,14 +350,24 @@ export async function POST(req: NextRequest): Promise<Response> {
     );
 
     // Return only the classification intent and parameters
-    return NextResponse.json(
-      {
-        intent: classification.intent,
-        parameters: classification.parameters,
-      },
-      { headers: await corsHeaders(origin) }
-    );
+    const response = {
+      intent: classification.intent,
+      parameters: classification.parameters,
+    };
+
+    console.log("Sending response:", JSON.stringify(response, null, 2));
+
+    return NextResponse.json(response, { headers: await corsHeaders(origin) });
   } catch (error) {
+    console.error("Error in classification request:", error);
+    if (error instanceof Error) {
+      console.error("Error details:", {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+      });
+    }
+
     logger.error(
       "Error in classification request",
       error as Error,
