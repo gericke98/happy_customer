@@ -1,0 +1,1 @@
+ALTER TABLE "tickets" ALTER COLUMN "id" SET DATA TYPE serial;
