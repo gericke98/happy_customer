@@ -15,10 +15,7 @@ const MANUALLY_ALLOWED_ORIGINS = [
 ];
 
 // Function to ensure a shop exists in the database
-const ensureShopExists = async (
-  shopId: string,
-  domain: string
-): Promise<string> => {
+const ensureShopExists = async (shopId: string): Promise<string | null> => {
   try {
     // Check if the shop already exists
     const existingShop = await db.query.shops.findFirst({
@@ -29,22 +26,12 @@ const ensureShopExists = async (
       return shopId;
     }
 
-    // If the shop doesn't exist, create it
-    const now = new Date().toISOString();
-    await db.insert(shops).values({
-      id: shopId,
-      name: shopId, // Use the ID as the name for now
-      domain: domain,
-      isActive: true,
-      createdAt: now,
-      updatedAt: now,
-    });
-
-    console.log(`Created new shop: ${shopId}`);
-    return shopId;
+    // If the shop doesn't exist, return null instead of creating it
+    console.log(`Shop not found: ${shopId}`);
+    return null;
   } catch (error) {
-    console.error(`Error ensuring shop exists: ${error}`);
-    return shopId; // Return the ID even if there was an error
+    console.error(`Error checking if shop exists: ${error}`);
+    return null;
   }
 };
 
@@ -126,13 +113,16 @@ const getShopIdFromOrigin = async (origin: string): Promise<string | null> => {
       const domain = url.hostname;
       const shopId = domain.split(".")[0]; // Extract shop ID from domain (e.g., "shameless-test" from "shameless-test.myshopify.com")
 
-      // Ensure the shop exists in the database
-      const validShopId = await ensureShopExists(shopId, domain);
+      // Check if the shop exists in the database
+      const validShopId = await ensureShopExists(shopId);
 
-      // Also ensure the origin is in the allowed_origins table
-      await ensureAllowedOriginExists(origin, validShopId);
+      // If the shop exists, ensure the origin is in the allowed_origins table
+      if (validShopId) {
+        await ensureAllowedOriginExists(origin, validShopId);
+        return validShopId;
+      }
 
-      return validShopId;
+      return null;
     } catch (error) {
       console.error("Error extracting shop ID from origin:", error);
       return null;
