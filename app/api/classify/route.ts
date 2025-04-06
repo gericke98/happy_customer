@@ -357,7 +357,11 @@ export async function POST(req: NextRequest): Promise<Response> {
 
     console.log("Sending response:", JSON.stringify(response, null, 2));
 
-    return NextResponse.json(response, { headers: await corsHeaders(origin) });
+    // Return a JSON response with the classification intent and parameters
+    return NextResponse.json(response, {
+      headers: await corsHeaders(origin),
+      status: 200,
+    });
   } catch (error) {
     console.error("Error in classification request:", error);
     if (error instanceof Error) {
