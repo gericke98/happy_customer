@@ -110,11 +110,10 @@ const getShopIdFromOrigin = async (origin: string): Promise<string | null> => {
   if (MANUALLY_ALLOWED_ORIGINS.includes(origin)) {
     try {
       const url = new URL(origin);
-      const domain = url.hostname;
-      const shopId = domain.split(".")[0]; // Extract shop ID from domain (e.g., "shameless-test" from "shameless-test.myshopify.com")
+      const domain = url.hostname; // This will be like "shameless-test.myshopify.com"
 
       // Check if the shop exists in the database
-      const validShopId = await ensureShopExists(shopId);
+      const validShopId = await ensureShopExists(domain);
 
       // If the shop exists, ensure the origin is in the allowed_origins table
       if (validShopId) {

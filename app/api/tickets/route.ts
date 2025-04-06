@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { NextRequest } from "next/server";
 import db from "@/db/drizzle";
 import { tickets, messages, allowedOrigins, shops } from "@/db/schema";
-import { z } from "zod";
 import { handleError } from "../utils/error-handler";
 import { eq, and } from "drizzle-orm";
+import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +18,7 @@ const MANUALLY_ALLOWED_ORIGINS = [
 const ensureShopExists = async (
   shopId: string,
   domain: string
-): Promise<string> => {
+): Promise<string | null> => {
   try {
     // Check if the shop already exists
     const existingShop = await db.query.shops.findFirst({
@@ -44,7 +44,7 @@ const ensureShopExists = async (
     return shopId;
   } catch (error) {
     console.error(`Error ensuring shop exists: ${error}`);
-    return shopId; // Return the ID even if there was an error
+    return null;
   }
 };
 
@@ -123,16 +123,18 @@ const getShopIdFromOrigin = async (origin: string): Promise<string | null> => {
   if (MANUALLY_ALLOWED_ORIGINS.includes(origin)) {
     try {
       const url = new URL(origin);
-      const domain = url.hostname;
-      const shopId = domain.split(".")[0]; // Extract shop ID from domain (e.g., "shameless-test" from "shameless-test.myshopify.com")
+      const domain = url.hostname; // This will be like "shameless-test.myshopify.com"
 
-      // Ensure the shop exists in the database
-      const validShopId = await ensureShopExists(shopId, domain);
+      // Check if the shop exists in the database
+      const validShopId = await ensureShopExists(domain, domain);
 
-      // Also ensure the origin is in the allowed_origins table
-      await ensureAllowedOriginExists(origin, validShopId);
+      // If the shop exists, ensure the origin is in the allowed_origins table
+      if (validShopId) {
+        await ensureAllowedOriginExists(origin, validShopId);
+        return validShopId;
+      }
 
-      return validShopId;
+      return null;
     } catch (error) {
       console.error("Error extracting shop ID from origin:", error);
       return null;
@@ -187,80 +189,52 @@ export async function OPTIONS(request: NextRequest) {
   });
 }
 
-// Validation schema
-const messageSchema = z.object({
-  sender: z.enum(["user", "bot", "admin"], {
-    message: "Sender must be 'user', 'bot', or 'admin'",
-  }),
-  text: z.string().min(1, "Message content cannot be empty"),
-  timestamp: z.string(),
-  status: z.string().optional(),
-  admin: z.boolean().optional(),
-  shopId: z.string().min(1, "Shop ID is required").optional(),
-});
-
 export async function POST(request: NextRequest) {
   const origin = request.headers.get("origin");
   try {
-    const body = await request.json();
-    const validatedMessage = messageSchema.parse(body);
+    const { message, shopId: providedShopId } = await request.json();
 
-    // Generate ticket ID
-    const ticketId = crypto.randomUUID();
-
-    // Get shop ID from origin if not provided in the request
-    let shopId = validatedMessage.shopId;
-    if (!shopId && origin) {
-      const originShopId = await getShopIdFromOrigin(origin);
-      if (originShopId) {
-        shopId = originShopId;
-      }
+    if (!message || typeof message !== "object") {
+      return NextResponse.json(
+        { error: "Invalid message data" },
+        { status: 400, headers: await corsHeaders(origin) }
+      );
     }
 
-    // Create ticket
-    const newTicket = await db
-      .insert(tickets)
-      .values({
-        id: ticketId,
-        orderNumber: null,
-        email: null,
-        status: validatedMessage.status || "open",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        admin: validatedMessage.admin || false,
-        // Only include shopId if it's not null
-        ...(shopId ? { shopId } : {}),
-      })
-      .returning();
+    // Get shop ID from origin if not provided in the request
+    let shopId = providedShopId;
+    if (!shopId && origin) {
+      shopId = await getShopIdFromOrigin(origin);
+    }
+
+    // Create ticket with or without shop ID
+    const now = new Date().toISOString();
+    const ticketId = crypto.randomUUID();
+    const ticketData = {
+      id: ticketId,
+      status: "open",
+      createdAt: now,
+      updatedAt: now,
+      ...(shopId ? { shopId } : {}),
+    };
+
+    const [ticket] = await db.insert(tickets).values(ticketData).returning();
 
     // Add the first message
     await db.insert(messages).values({
-      sender: validatedMessage.sender,
-      text: validatedMessage.text,
-      timestamp: validatedMessage.timestamp,
-      ticketId: ticketId,
+      sender: "user",
+      text: message.text,
+      timestamp: message.timestamp || now,
+      ticketId: ticket.id,
+      ...(shopId ? { shopId } : {}),
     });
 
-    const headers = await corsHeaders(origin);
     return NextResponse.json(
-      {
-        status: 200,
-        data: newTicket[0],
-      },
-      { headers }
+      { ticketId: ticket.id },
+      { headers: await corsHeaders(origin) }
     );
   } catch (error) {
     console.error("Error creating ticket:", error);
-    if (error instanceof z.ZodError) {
-      const headers = await corsHeaders(origin);
-      return NextResponse.json(
-        {
-          status: 400,
-          error: `Invalid message data: ${error.errors[0].message}`,
-        },
-        { status: 400, headers }
-      );
-    }
     return handleError(error, undefined, origin);
   }
 }
