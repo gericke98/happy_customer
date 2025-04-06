@@ -193,6 +193,7 @@ export async function POST(request: NextRequest) {
   const origin = request.headers.get("origin");
   try {
     const body = await request.json();
+    console.log("Received request body:", JSON.stringify(body));
 
     // Validate request body
     if (!body || typeof body !== "object") {
@@ -202,11 +203,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { message, shopId: providedShopId } = body;
+    // Handle different request formats
+    let message, shopId;
 
-    if (!message || typeof message !== "object") {
+    // Format 1: { message: { text: "..." }, shopId: "..." }
+    if (body.message && typeof body.message === "object") {
+      message = body.message;
+      shopId = body.shopId;
+    }
+    // Format 2: { text: "...", shopId: "..." } (direct message format)
+    else if (body.text && typeof body.text === "string") {
+      message = { text: body.text, timestamp: body.timestamp };
+      shopId = body.shopId;
+    }
+    // Format 3: { message: "..." } (simple string message)
+    else if (body.message && typeof body.message === "string") {
+      message = { text: body.message };
+      shopId = body.shopId;
+    }
+    // Format 4: { sender: "...", text: "...", timestamp: "...", shopId: "..." } (direct format)
+    else if (body.text && body.sender) {
+      message = {
+        text: body.text,
+        sender: body.sender,
+        timestamp: body.timestamp,
+      };
+      shopId = body.shopId;
+    }
+    // Invalid format
+    else {
       return NextResponse.json(
-        { error: "Invalid message data" },
+        {
+          error:
+            "Invalid request format. Expected { message: { text: '...' } } or { text: '...' } or { sender: '...', text: '...' }",
+          received: JSON.stringify(body),
+        },
         { status: 400, headers: await corsHeaders(origin) }
       );
     }
@@ -219,7 +250,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Get shop ID from origin if not provided in the request
-    let shopId = providedShopId;
     if (!shopId && origin) {
       shopId = await getShopIdFromOrigin(origin);
       console.log(`Shop ID from origin: ${shopId}`);
@@ -241,7 +271,7 @@ export async function POST(request: NextRequest) {
 
     // Add the first message
     const messageData = {
-      sender: "user",
+      sender: message.sender || "user",
       text: message.text,
       timestamp: message.timestamp || now,
       ticketId: ticket.id,

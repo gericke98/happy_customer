@@ -204,12 +204,43 @@ export async function POST(req: NextRequest): Promise<Response> {
     let body;
     try {
       body = await req.json();
+      console.log("Received request body:", JSON.stringify(body));
     } catch (error) {
       logger.error("Error parsing request body", error as Error, {}, requestId);
       throw new APIError("Invalid JSON in request body", 400, "INVALID_JSON");
     }
 
-    const { message, context } = body;
+    // Handle different request formats
+    let message, context;
+
+    // Format 1: { message: "..." }
+    if (body.message && typeof body.message === "string") {
+      message = body.message;
+      context = body.context;
+    }
+    // Format 2: { message: { text: "..." } }
+    else if (
+      body.message &&
+      typeof body.message === "object" &&
+      body.message.text
+    ) {
+      message = body.message.text;
+      context = body.context;
+    }
+    // Format 3: { text: "..." }
+    else if (body.text && typeof body.text === "string") {
+      message = body.text;
+      context = body.context;
+    }
+    // Invalid format
+    else {
+      console.error("Invalid request format:", JSON.stringify(body));
+      throw new APIError(
+        "Invalid request format. Expected { message: '...' } or { message: { text: '...' } } or { text: '...' }",
+        400,
+        "INVALID_FORMAT"
+      );
+    }
 
     // Validate required fields
     if (!message || typeof message !== "string") {
@@ -236,9 +267,11 @@ export async function POST(req: NextRequest): Promise<Response> {
     }
 
     // Get shop ID from origin if available
-    let shopId = null;
+    let shopId: string | undefined = undefined;
     if (origin) {
-      shopId = await getShopIdFromOrigin(origin);
+      const originShopId = await getShopIdFromOrigin(origin);
+      shopId = originShopId || undefined;
+      logger.info("Shop ID from origin", { shopId }, requestId);
     }
 
     // Message classification with timeout

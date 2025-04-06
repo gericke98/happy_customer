@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { NextRequest } from "next/server";
 import db from "@/db/drizzle";
 import { messages, allowedOrigins, shops } from "@/db/schema";
-import { z } from "zod";
 import { handleError } from "../utils/error-handler";
 import { eq, and } from "drizzle-orm";
 
@@ -176,52 +175,91 @@ export async function OPTIONS(request: NextRequest) {
   });
 }
 
-// Validation schema
-const messageSchema = z.object({
-  sender: z.enum(["user", "bot", "admin"], {
-    message: "Sender must be 'user', 'bot', or 'admin'",
-  }),
-  text: z.string().min(1, "Message content cannot be empty"),
-  timestamp: z.string(),
-  ticketId: z.string(),
-  shopId: z.string().optional(),
-});
-
 export async function POST(request: NextRequest) {
   const origin = request.headers.get("origin");
   try {
-    const { ticketId, message } = await request.json();
+    const body = await request.json();
+    console.log("Received request body:", JSON.stringify(body));
 
-    if (!ticketId || !message) {
+    // Validate request body
+    if (!body || typeof body !== "object") {
       return NextResponse.json(
-        { error: "Missing ticketId or message" },
+        { error: "Invalid request body" },
         { status: 400, headers: await corsHeaders(origin) }
       );
     }
 
-    // Validate message data
-    const validatedMessage = messageSchema.parse({
-      ...message,
-      ticketId,
-    });
+    // Handle different request formats
+    let ticketId, message, shopId;
+
+    // Format 1: { ticketId: "...", message: { sender: "...", text: "...", ... } }
+    if (body.ticketId && body.message && typeof body.message === "object") {
+      ticketId = body.ticketId;
+      message = body.message;
+      shopId = message.shopId;
+    }
+    // Format 2: { ticketId: "...", sender: "...", text: "...", ... }
+    else if (body.ticketId && body.text && body.sender) {
+      ticketId = body.ticketId;
+      message = {
+        sender: body.sender,
+        text: body.text,
+        timestamp: body.timestamp,
+        ticketId: body.ticketId,
+        shopId: body.shopId,
+      };
+      shopId = body.shopId;
+    }
+    // Invalid format
+    else {
+      return NextResponse.json(
+        {
+          error:
+            "Invalid request format. Expected { ticketId: '...', message: { sender: '...', text: '...', ... } } or { ticketId: '...', sender: '...', text: '...', ... }",
+          received: JSON.stringify(body),
+        },
+        { status: 400, headers: await corsHeaders(origin) }
+      );
+    }
+
+    if (!ticketId || typeof ticketId !== "string") {
+      return NextResponse.json(
+        { error: "Ticket ID is required and must be a string" },
+        { status: 400, headers: await corsHeaders(origin) }
+      );
+    }
+
+    if (!message.text || typeof message.text !== "string") {
+      return NextResponse.json(
+        { error: "Message text is required and must be a string" },
+        { status: 400, headers: await corsHeaders(origin) }
+      );
+    }
+
+    if (!message.sender || typeof message.sender !== "string") {
+      return NextResponse.json(
+        { error: "Message sender is required and must be a string" },
+        { status: 400, headers: await corsHeaders(origin) }
+      );
+    }
 
     // Get shop ID from origin if not provided in the request
-    let shopId = validatedMessage.shopId;
     if (!shopId && origin) {
-      const originShopId = await getShopIdFromOrigin(origin);
-      if (originShopId) {
-        shopId = originShopId;
-      }
+      shopId = await getShopIdFromOrigin(origin);
+      console.log(`Shop ID from origin: ${shopId}`);
     }
 
     // Add message to database
-    await db.insert(messages).values({
-      sender: validatedMessage.sender,
-      text: validatedMessage.text,
-      timestamp: validatedMessage.timestamp,
-      ticketId: validatedMessage.ticketId,
+    const messageData = {
+      sender: message.sender,
+      text: message.text,
+      timestamp: message.timestamp || new Date().toISOString(),
+      ticketId: ticketId,
       ...(shopId ? { shopId } : {}),
-    });
+    };
+
+    console.log(`Adding message with data: ${JSON.stringify(messageData)}`);
+    await db.insert(messages).values(messageData);
 
     return NextResponse.json(
       { success: true },
@@ -229,15 +267,6 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error("Error adding message:", error);
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        {
-          status: 400,
-          error: `Invalid message data: ${error.errors[0].message}`,
-        },
-        { status: 400, headers: await corsHeaders(origin) }
-      );
-    }
     return handleError(error, undefined, origin);
   }
 }
