@@ -192,7 +192,17 @@ export async function OPTIONS(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const origin = request.headers.get("origin");
   try {
-    const { message, shopId: providedShopId } = await request.json();
+    const body = await request.json();
+
+    // Validate request body
+    if (!body || typeof body !== "object") {
+      return NextResponse.json(
+        { error: "Invalid request body" },
+        { status: 400, headers: await corsHeaders(origin) }
+      );
+    }
+
+    const { message, shopId: providedShopId } = body;
 
     if (!message || typeof message !== "object") {
       return NextResponse.json(
@@ -201,10 +211,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!message.text || typeof message.text !== "string") {
+      return NextResponse.json(
+        { error: "Message text is required and must be a string" },
+        { status: 400, headers: await corsHeaders(origin) }
+      );
+    }
+
     // Get shop ID from origin if not provided in the request
     let shopId = providedShopId;
     if (!shopId && origin) {
       shopId = await getShopIdFromOrigin(origin);
+      console.log(`Shop ID from origin: ${shopId}`);
     }
 
     // Create ticket with or without shop ID
@@ -218,16 +236,20 @@ export async function POST(request: NextRequest) {
       ...(shopId ? { shopId } : {}),
     };
 
+    console.log(`Creating ticket with data: ${JSON.stringify(ticketData)}`);
     const [ticket] = await db.insert(tickets).values(ticketData).returning();
 
     // Add the first message
-    await db.insert(messages).values({
+    const messageData = {
       sender: "user",
       text: message.text,
       timestamp: message.timestamp || now,
       ticketId: ticket.id,
       ...(shopId ? { shopId } : {}),
-    });
+    };
+
+    console.log(`Adding message with data: ${JSON.stringify(messageData)}`);
+    await db.insert(messages).values(messageData);
 
     return NextResponse.json(
       { ticketId: ticket.id },
