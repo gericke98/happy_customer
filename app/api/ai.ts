@@ -263,56 +263,101 @@ Size recommendation guidelines:
 
   private getClassificationPrompt(): string {
     return `You are an intelligent assistant that classifies user messages for a Shopify ecommerce chatbot. Your task is to identify the user's intent and extract relevant parameters.
-  
-  Consider both user messages and system responses in the conversation context when classifying. For example:
-  - If a user first tracks an order and receives a response saying it's delivered, then mentions they haven't received it, classify it as a delivery_issue
-  - If the system previously provided tracking info and the user reports issues, maintain that tracking number in the parameters
-  - If the system confirmed an order number/email pair in a previous response, maintain those in subsequent classifications
-  - For change_delivery intent, set delivery_address_confirmed to true ONLY if the user explicitly confirms the new address that was proposed by the system in a previous message. The confirmation should be in response to a system message that proposed a specific address.
-  - For returns_exchange intent, check if the returns website URL was already provided in previous system messages
-  - If user asks about returns or exchange policy, classify it as returns_exchange intent
-  - If user asks about changing the size of a product from their order, classify it as returns_exchange intent
-  - If user asks about product sizes or sizing information, classify it as product_sizing intent
-  - If user asks about when a product will be back in stock, classify it as restock intent
-  - If user asks about discounts, promotions, or wants to receive offers, classify it as promo_code intent and extract their email
-  - If user asks for an invoice or "factura", classify it as invoice_request intent and extract order number and email
-  - If the user says "thank you", "thanks", "gracias", "ok", "perfect", "perfecto" or similar closing remarks without asking anything else, classify it as "conversation_end"
-  - For queries that don't match other intents but are about an order (shipping, delivery, order status, etc), classify as "other-order"
-  - For queries that don't match other intents and are not related to any order, classify as "other-general"
-  - If user wants to update or modify their order, classify it as "update_order" and extract what they want to update (shipping_address or product) if mentioned
-  
-  For product sizing queries:
-  - Extract height in cm if provided
-  - Extract fit preference (tight, regular, loose)
-  - Set size_query to "true" if asking about sizing
-  - Extract product_name and normalize it to match one of the active products: ${this.activeProducts.join(", ")}
-  - If product_name cannot be normalized to match any of the active products, set it to "not_found"
 
-  For restock queries:
-  - Extract product_name and normalize it to match one of the active products: ${this.activeProducts.join(", ")}
-  - If product_name cannot be normalized to match any of the active products, set it to "not_found"
-  - Extract product_size and normalize it to one of: "X-SMALL", "SMALL", "MEDIUM", "LARGE", "EXTRA LARGE", "EXTRA EXTRA LARGE" using these rules:
-    * XS, xs -> "X-SMALL"
-    * S, s -> "SMALL"
-    * M, m -> "MEDIUM"
-    * L, l -> "LARGE"
-    * XL, xl -> "EXTRA LARGE"
-    * XXL, xxl -> "EXTRA EXTRA LARGE"
-  - If product_size cannot be normalized to one of these values, set it to "not_found"
-  - Extract email if provided
-  - Reset product parameters if a new product is mentioned
+  IMPORTANT CLASSIFICATION RULES:
+  1. Consider both user messages and system responses in the conversation context
+  2. Maintain parameters from previous messages when clearly referring to the same order/product
+  3. Reset parameters when a new order/product is mentioned
+  4. Detect language (English or Spanish) based on the message content
+  5. Extract all relevant parameters for each intent type
+  6. For ambiguous cases, choose the most specific intent that matches
 
-  IMPORTANT: For promo_code intent:
-  - Extract email if provided
-  - Look for keywords like "discount", "promo", "offer", "sale", "descuento", "promoción", "oferta", "rebajas"
-  - If user expresses interest in future discounts or promotions, classify as promo_code even if no explicit discount request
-  - Maintain email from previous messages if user is clearly continuing the same discount conversation
+  INTENT CLASSIFICATION GUIDELINES:
 
-  IMPORTANT: For invoice_request intent:
-  - Extract order number and email (required for invoice generation)
-  - Look for keywords like "invoice", "factura", "receipt", "recibo"
-  - Maintain order number and email from previous messages if clearly referring to the same order
-  - If order information is missing, set order_number and email to empty strings
+  1. ORDER TRACKING:
+     - When user asks about order location, status, or delivery time
+     - English examples: "Where is my order?", "What's the status of my order?", "Has my order shipped?", "When will my order arrive?", "Can you track my order?", "I want to know where my package is"
+     - Spanish examples: "¿Dónde está mi pedido?", "¿Estado de mi pedido?", "¿Rastrear mi pedido?", "¿Cuándo llega mi pedido?", "¿Ha sido enviado mi pedido?", "¿Puedes localizar mi pedido?", "Quiero saber dónde está mi paquete"
+     - Extract: order_number, email, tracking_number
+
+  2. DELIVERY ISSUE:
+     - When user reports not receiving a delivered order or delivery problems
+     - English examples: "I haven't received my order", "My package is late", "My order was marked as delivered but I don't have it", "I'm still waiting for my package", "It says delivered but I don't have it"
+     - Spanish examples: "No he recibido mi pedido", "Mi paquete está retrasado", "Mi pedido aparece como entregado pero no lo tengo", "Sigo esperando mi paquete", "Dice entregado pero no lo tengo"
+     - Extract: order_number, email, tracking_number, delivery_status
+
+  3. RETURNS/EXCHANGE:
+     - When user wants to return, exchange, or change a product
+     - English examples: "I want to return this", "How do I exchange this?", "Can I get a refund?", "I need to change the size", "I want to send this back", "How do I return an item?"
+     - Spanish examples: "Quiero devolver esto", "¿Cómo puedo cambiar esto?", "¿Puedo obtener un reembolso?", "Necesito cambiar la talla", "Quiero enviar esto de vuelta", "¿Cómo devuelvo un artículo?"
+     - Extract: order_number, email, return_type, product_name, product_size
+     - Set returns_website_sent to true if URL was already provided
+
+  4. CHANGE DELIVERY:
+     - When user wants to change delivery address or shipping details
+     - English examples: "I need to change my delivery address", "Can you update my shipping address?", "I want to send it to a different address", "I put the wrong address", "Can you change where my order is going?"
+     - Spanish examples: "Necesito cambiar mi dirección de entrega", "¿Puedes actualizar mi dirección de envío?", "Quiero enviarlo a una dirección diferente", "Puse la dirección incorrecta", "¿Puedes cambiar a dónde va mi pedido?"
+     - Extract: order_number, email, new_delivery_info
+     - Set delivery_address_confirmed to true ONLY if user explicitly confirms a proposed address
+
+  5. PRODUCT SIZING:
+     - When user asks about product sizes, measurements, or fit
+     - English examples: "What size should I get?", "How does this fit?", "What are the measurements?", "Is this true to size?", "I'm 180cm, what size do I need?", "Does this run small or large?"
+     - Spanish examples: "¿Qué talla debo comprar?", "¿Cómo va de talla?", "¿Cuáles son las medidas?", "¿Es talla real?", "Mido 180cm, ¿qué talla necesito?", "¿Va pequeño o grande?"
+     - Extract: product_name, product_size, height, fit, size_query (set to "true")
+     - Normalize product_name to match active products: ${this.activeProducts.join(", ")}
+
+  6. RESTOCK:
+     - When user asks about product availability or restocking
+     - English examples: "When will this be back in stock?", "Do you know when you'll restock this?", "Will you have more of this soon?", "Is this coming back?", "When can I buy this again?"
+     - Spanish examples: "¿Cuándo tendrán esto de nuevo?", "¿Saben cuándo repondrán esto?", "¿Tendrán más pronto?", "¿Volverá a estar disponible?", "¿Cuándo podré comprar esto de nuevo?"
+     - Extract: product_name, product_size, email
+     - Normalize product_name to match active products: ${this.activeProducts.join(", ")}
+     - Normalize product_size using these rules:
+       * XS, xs -> "X-SMALL"
+       * S, s -> "SMALL"
+       * M, m -> "MEDIUM"
+       * L, l -> "LARGE"
+       * XL, xl -> "EXTRA LARGE"
+       * XXL, xxl -> "EXTRA EXTRA LARGE"
+
+  7. PROMO CODE:
+     - When user asks about discounts, promotions, or offers
+     - English examples: "Do you have any discounts?", "Are there any promotions?", "Can I get a discount code?", "Do you offer any sales?", "Is there a coupon I can use?", "Any special offers?"
+     - Spanish examples: "¿Tienen descuentos?", "¿Hay promociones?", "¿Puedo obtener un código de descuento?", "¿Hacen rebajas?", "¿Hay algún cupón que pueda usar?", "¿Ofertas especiales?"
+     - Extract: email
+     - Look for keywords: discount, promo, offer, sale, descuento, promoción, oferta, rebajas
+
+  8. INVOICE REQUEST:
+     - When user asks for an invoice, receipt, or billing document
+     - English examples: "Can I get an invoice?", "I need a receipt", "Can you send me an invoice?", "I need a bill for my records", "Can you provide an invoice?"
+     - Spanish examples: "¿Puedo obtener una factura?", "Necesito un recibo", "¿Me puedes enviar una factura?", "Necesito una factura para mis registros", "¿Puedes proporcionar una factura?"
+     - Extract: order_number, email
+     - Look for keywords: invoice, factura, receipt, recibo
+
+  9. UPDATE ORDER:
+     - When user wants to modify an existing order
+     - English examples: "I want to update my order", "Can I change my order?", "I need to modify my purchase", "Can you update my shipping?", "I want to change what I ordered"
+     - Spanish examples: "Quiero actualizar mi pedido", "¿Puedo cambiar mi pedido?", "Necesito modificar mi compra", "¿Puedes actualizar mi envío?", "Quiero cambiar lo que pedí"
+     - Extract: order_number, email, update_type (shipping_address or product)
+
+  10. CONVERSATION END:
+      - When user expresses gratitude or satisfaction without further questions
+      - English examples: "Thank you", "Thanks", "That's all", "Perfect", "Great, thanks", "That's helpful"
+      - Spanish examples: "Gracias", "Perfecto", "Eso es todo", "Genial, gracias", "Me ha servido"
+      - No parameters needed
+
+  11. OTHER-ORDER:
+      - For order-related queries that don't fit other intents
+      - English examples: "What payment methods do you accept?", "Do you ship internationally?", "What's your shipping policy?", "How long does shipping take?"
+      - Spanish examples: "¿Qué métodos de pago aceptan?", "¿Envían internacionalmente?", "¿Cuál es su política de envío?", "¿Cuánto tarda el envío?"
+      - Extract relevant parameters if available
+
+  12. OTHER-GENERAL:
+      - For non-order related queries
+      - English examples: "What's your return policy?", "Do you have a physical store?", "What are your business hours?", "Tell me about your brand"
+      - Spanish examples: "¿Cuál es su política de devolución?", "¿Tienen tienda física?", "¿Cuáles son sus horarios?", "Cuéntame sobre su marca"
+      - No specific parameters needed
 
   Output ONLY a JSON object with the following structure:
   {
