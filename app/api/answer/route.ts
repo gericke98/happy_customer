@@ -33,6 +33,24 @@ const VALID_INTENTS = [
   "invoice_request",
 ];
 
+// Conversation end responses in different languages
+const CONVERSATION_END_RESPONSES = {
+  Spanish: [
+    "¡Gracias por contactar con Shameless Collective! Si necesitas algo más, no dudes en escribirnos. ¡Que tengas un día genial! 😊",
+    "¡Un placer ayudarte! Si tienes más preguntas, aquí estaré. ¡Que tengas un día increíble! ✨",
+    "¡Perfecto! Me alegro de haber podido ayudarte. Si necesitas algo más, no dudes en contactarnos. ¡Hasta pronto! 👋",
+    "¡Genial! Me alegro de haber resuelto tu consulta. Si necesitas algo más, aquí estaré. ¡Que tengas un día estupendo! 🌟",
+    "¡Gracias por contactar con nosotros! Si necesitas más ayuda, no dudes en escribir. ¡Que tengas un día fantástico! 🎉",
+  ],
+  English: [
+    "Thank you for contacting Shameless Collective! If you need anything else, don't hesitate to reach out. Have a great day! 😊",
+    "It was a pleasure helping you! If you have any more questions, I'll be here. Have an amazing day! ✨",
+    "Perfect! I'm glad I could help. If you need anything else, feel free to contact us. See you soon! 👋",
+    "Great! I'm glad I could resolve your query. If you need anything else, I'll be here. Have a wonderful day! 🌟",
+    "Thanks for reaching out! If you need more help, don't hesitate to write. Have a fantastic day! 🎉",
+  ],
+};
+
 // Simple in-memory rate limiting
 const rateLimits = new Map<string, { count: number; resetTime: number }>();
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
@@ -174,6 +192,35 @@ export async function POST(req: NextRequest): Promise<Response> {
         "Shopify data must be an object",
         400,
         "INVALID_SHOPIFY_DATA"
+      );
+    }
+
+    // Special handling for conversation_end intent
+    if (intent === "conversation_end") {
+      // Determine language
+      const userLanguage = language || "Spanish";
+      const responses =
+        CONVERSATION_END_RESPONSES[
+          userLanguage as keyof typeof CONVERSATION_END_RESPONSES
+        ] || CONVERSATION_END_RESPONSES.Spanish;
+
+      // Select a random response
+      const randomIndex = Math.floor(Math.random() * responses.length);
+      const answer = responses[randomIndex];
+
+      // Return the conversation end response
+      return NextResponse.json(
+        {
+          answer,
+          cached: false,
+          timestamp: new Date().toISOString(),
+          requestId,
+          conversationEnded: true,
+        },
+        {
+          status: 200,
+          headers: corsHeaders,
+        }
       );
     }
 
