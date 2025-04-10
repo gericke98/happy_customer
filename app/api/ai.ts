@@ -456,7 +456,17 @@ Size recommendation guidelines:
     context?: { role: string; content: string }[]
   ) {
     if (context?.length) {
-      if (classification.intent === "other-general") {
+      // Check if this is a follow-up message providing information requested by the system
+      const isFollowUpResponse = this.isFollowUpResponse(
+        classification,
+        context
+      );
+
+      if (isFollowUpResponse) {
+        // Inherit intent from previous messages if this is a follow-up
+        this.inheritPreviousIntent(classification, context);
+      } else if (classification.intent === "other-general") {
+        // For non-follow-up messages, try to inherit intent if classified as other-general
         this.inheritPreviousIntent(classification, context);
       }
 
@@ -469,9 +479,98 @@ Size recommendation guidelines:
           msg.content.includes(this.RETURNS_PORTAL_URL)
         );
       }
+
+      // Extract order number and email from context if they're missing
+      this.extractOrderInfoFromContext(classification, context);
     }
 
     return classification;
+  }
+
+  private isFollowUpResponse(
+    classification: ClassifiedMessage,
+    context: { role: string; content: string }[]
+  ): boolean {
+    // Check if the last system message asked for specific information
+    const lastSystemMessage = [...context]
+      .reverse()
+      .find((msg) => msg.role === "system" || msg.role === "assistant");
+
+    if (!lastSystemMessage) return false;
+
+    const systemContent = lastSystemMessage.content.toLowerCase();
+    const userMessage =
+      classification.parameters.order_number ||
+      classification.parameters.email ||
+      "";
+
+    // Check if system asked for order number and/or email
+    const askedForOrderNumber =
+      systemContent.includes("número de pedido") ||
+      systemContent.includes("order number") ||
+      systemContent.includes("#");
+
+    const askedForEmail =
+      systemContent.includes("email") || systemContent.includes("correo");
+
+    // Check if user provided order number or email
+    const providedOrderNumber =
+      userMessage.includes("#") || /\d{4,}/.test(userMessage);
+
+    const providedEmail = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(
+      userMessage
+    );
+
+    // If system asked for info and user provided it, this is likely a follow-up
+    return (
+      (askedForOrderNumber && providedOrderNumber) ||
+      (askedForEmail && providedEmail)
+    );
+  }
+
+  private extractOrderInfoFromContext(
+    classification: ClassifiedMessage,
+    context: { role: string; content: string }[]
+  ) {
+    // If order number or email is missing, try to extract from context
+    if (
+      !classification.parameters.order_number ||
+      !classification.parameters.email
+    ) {
+      // Look for order number pattern (#12345)
+      const orderNumberRegex = /#(\d{4,})/;
+      // Look for email pattern
+      const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+
+      for (const msg of context) {
+        // Only look at user messages
+        if (msg.role !== "user") continue;
+
+        // Extract order number if missing
+        if (!classification.parameters.order_number) {
+          const orderMatch = msg.content.match(orderNumberRegex);
+          if (orderMatch && orderMatch[1]) {
+            classification.parameters.order_number = orderMatch[1];
+          }
+        }
+
+        // Extract email if missing
+        if (!classification.parameters.email) {
+          const emailMatch = msg.content.match(emailRegex);
+          if (emailMatch) {
+            classification.parameters.email = emailMatch[0];
+          }
+        }
+
+        // If we found both, we can stop
+        if (
+          classification.parameters.order_number &&
+          classification.parameters.email
+        ) {
+          break;
+        }
+      }
+    }
   }
 
   private inheritPreviousIntent(
