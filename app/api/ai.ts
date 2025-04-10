@@ -462,9 +462,15 @@ Size recommendation guidelines:
         context
       );
 
+      // Check if this is a new request after a previous conversation has concluded
+      const isNewRequest = this.isNewRequest(classification, context);
+
       if (isFollowUpResponse) {
         // Inherit intent from previous messages if this is a follow-up
         this.inheritPreviousIntent(classification, context);
+      } else if (isNewRequest) {
+        // For new requests, try to classify based on the message content
+        this.classifyNewRequest(classification);
       } else if (classification.intent === "other-general") {
         // For non-follow-up messages, try to inherit intent if classified as other-general
         this.inheritPreviousIntent(classification, context);
@@ -526,6 +532,168 @@ Size recommendation guidelines:
       (askedForOrderNumber && providedOrderNumber) ||
       (askedForEmail && providedEmail)
     );
+  }
+
+  private isNewRequest(
+    classification: ClassifiedMessage,
+    context: { role: string; content: string }[]
+  ): boolean {
+    // Look for patterns that indicate a new request after a previous conversation
+    const lastUserMessage =
+      classification.parameters.order_number ||
+      classification.parameters.email ||
+      "";
+
+    // Check for phrases that indicate starting a new request
+    const newRequestPhrases = [
+      "otro pedido",
+      "another order",
+      "otra cosa",
+      "something else",
+      "quiero localizar",
+      "want to track",
+      "buscar",
+      "find",
+      "necesito",
+      "need",
+      "tengo",
+      "have",
+      "quiero",
+      "want",
+    ];
+
+    // Check if the message contains any of these phrases
+    const containsNewRequestPhrase = newRequestPhrases.some((phrase) =>
+      lastUserMessage.toLowerCase().includes(phrase)
+    );
+
+    // Check if the last system message was a conclusion to a previous request
+    const lastSystemMessage = [...context]
+      .reverse()
+      .find((msg) => msg.role === "system" || msg.role === "assistant");
+
+    if (!lastSystemMessage) return false;
+
+    const systemContent = lastSystemMessage.content.toLowerCase();
+
+    // Check if the last system message was providing order information (conclusion)
+    const wasProvidingOrderInfo =
+      systemContent.includes("pedido") &&
+      (systemContent.includes("número de seguimiento") ||
+        systemContent.includes("tracking number") ||
+        systemContent.includes("está en camino") ||
+        systemContent.includes("is on the way"));
+
+    return containsNewRequestPhrase && wasProvidingOrderInfo;
+  }
+
+  private classifyNewRequest(classification: ClassifiedMessage) {
+    const userMessage =
+      classification.parameters.order_number ||
+      classification.parameters.email ||
+      "";
+
+    // Check for order tracking intent
+    if (
+      userMessage.toLowerCase().includes("pedido") &&
+      (userMessage.toLowerCase().includes("localizar") ||
+        userMessage.toLowerCase().includes("donde") ||
+        userMessage.toLowerCase().includes("buscar") ||
+        userMessage.toLowerCase().includes("track") ||
+        userMessage.toLowerCase().includes("where") ||
+        userMessage.toLowerCase().includes("find"))
+    ) {
+      classification.intent = "order_tracking";
+    }
+
+    // Check for returns/exchange intent
+    else if (
+      userMessage.toLowerCase().includes("devolver") ||
+      userMessage.toLowerCase().includes("cambiar") ||
+      userMessage.toLowerCase().includes("return") ||
+      userMessage.toLowerCase().includes("exchange")
+    ) {
+      classification.intent = "returns_exchange";
+    }
+
+    // Check for product sizing intent
+    else if (
+      userMessage.toLowerCase().includes("talla") ||
+      userMessage.toLowerCase().includes("tamaño") ||
+      userMessage.toLowerCase().includes("size") ||
+      userMessage.toLowerCase().includes("fit")
+    ) {
+      classification.intent = "product_sizing";
+    }
+
+    // Check for restock intent
+    else if (
+      userMessage.toLowerCase().includes("disponible") ||
+      userMessage.toLowerCase().includes("stock") ||
+      userMessage.toLowerCase().includes("available") ||
+      userMessage.toLowerCase().includes("when")
+    ) {
+      classification.intent = "restock";
+    }
+
+    // Check for promo code intent
+    else if (
+      userMessage.toLowerCase().includes("descuento") ||
+      userMessage.toLowerCase().includes("promo") ||
+      userMessage.toLowerCase().includes("discount") ||
+      userMessage.toLowerCase().includes("offer")
+    ) {
+      classification.intent = "promo_code";
+    }
+
+    // Check for invoice request intent
+    else if (
+      userMessage.toLowerCase().includes("factura") ||
+      userMessage.toLowerCase().includes("recibo") ||
+      userMessage.toLowerCase().includes("invoice") ||
+      userMessage.toLowerCase().includes("receipt")
+    ) {
+      classification.intent = "promo_code";
+    }
+
+    // Check for delivery issue intent
+    else if (
+      userMessage.toLowerCase().includes("no he recibido") ||
+      userMessage.toLowerCase().includes("no llega") ||
+      userMessage.toLowerCase().includes("haven't received") ||
+      userMessage.toLowerCase().includes("not arrived")
+    ) {
+      classification.intent = "delivery_issue";
+    }
+
+    // Check for change delivery intent
+    else if (
+      userMessage.toLowerCase().includes("cambiar dirección") ||
+      userMessage.toLowerCase().includes("nueva dirección") ||
+      userMessage.toLowerCase().includes("change address") ||
+      userMessage.toLowerCase().includes("new address")
+    ) {
+      classification.intent = "change_delivery";
+    }
+
+    // Check for update order intent
+    else if (
+      userMessage.toLowerCase().includes("actualizar pedido") ||
+      userMessage.toLowerCase().includes("modificar pedido") ||
+      userMessage.toLowerCase().includes("update order") ||
+      userMessage.toLowerCase().includes("modify order")
+    ) {
+      classification.intent = "update_order";
+    }
+
+    // If we couldn't classify it specifically, but it mentions "order" or "pedido",
+    // it's likely an order-related query
+    else if (
+      userMessage.toLowerCase().includes("pedido") ||
+      userMessage.toLowerCase().includes("order")
+    ) {
+      classification.intent = "other-order";
+    }
   }
 
   private extractOrderInfoFromContext(
