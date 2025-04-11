@@ -11,19 +11,6 @@ export async function POST(request: Request) {
   try {
     // Check API key
     const headersList = headers();
-    const apiKey = headersList.get("x-api-key");
-
-    if (!apiKey || apiKey !== process.env.EXTERNAL_API_KEY) {
-      return NextResponse.json(
-        {
-          error: {
-            message: "Invalid or missing API key",
-            code: "UNAUTHORIZED",
-          },
-        },
-        { status: 401 }
-      );
-    }
 
     // Rate limiting
     const clientIp = headersList.get("x-forwarded-for") || "unknown";
