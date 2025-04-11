@@ -34,6 +34,16 @@ export class AIService {
   - For queries that don't match other intents but are about an order (shipping, delivery, order status, etc), classify as "other-order"
   - For queries that don't match other intents and are not related to any order, classify as "other-general"
   - If user wants to update or modify their order, classify it as "update_order" and extract what they want to update (shipping_address or product) if mentioned
+
+  IMPORTANT: For new order tracking requests:
+  - If the user asks to track a new order after a conversation has ended (e.g., after "gracias" or a system closing message), classify it as "order_tracking"
+  - Reset ALL order-related parameters (order_number, email, tracking_number, etc.) for new order tracking requests
+  - Look for phrases like "otro pedido", "otra orden", "quiero localizar", "buscar otro pedido", "track another order", "find another order"
+  - If the user's message indicates they want to track a different order, classify as "order_tracking" even if they don't provide the order number yet
+  - Consider a conversation ended if:
+    * The last system message was a closing message (e.g., "¡Que tengas un excelente día!")
+    * The user said "gracias" or similar and the system responded with a closing message
+    * There was a clear break in the conversation flow
   
   IMPORTANT: For product-related intents (product_sizing, restock):
   - ALWAYS reset product parameters when a new product is mentioned, even if mentioned informally (e.g., "y el polo amarillo?", "what about the yellow polo?")
@@ -47,7 +57,8 @@ export class AIService {
   - When a new order is mentioned that's different from the previous one, RESET ALL order-related parameters (order_number, email, ...)
   - Only maintain previous order parameters if the user is clearly referring to the same order
   - If unsure whether it's the same order, reset the parameters
-  
+  - For new order tracking requests after a conversation has ended, ALWAYS reset order parameters and classify as "order_tracking"
+
   For product sizing queries:
   - Extract height in cm if provided
   - Extract fit preference (tight, regular, loose)
@@ -596,20 +607,23 @@ For update order requests:
 
     // Check for phrases that indicate starting a new request
     const newRequestPhrases = [
+      // Spanish phrases
       "otro pedido",
-      "another order",
+      "otra orden",
       "otra cosa",
-      "something else",
-      "quiero localizar",
-      "want to track",
-      "buscar",
-      "find",
-      "necesito",
-      "need",
-      "tengo",
-      "have",
+      "algo más",
       "quiero",
-      "want",
+      "necesito",
+      "tengo",
+      "buscar",
+      // English phrases
+      "another order",
+      "something else",
+      "want to",
+      "need to",
+      "have",
+      "find",
+      "track",
     ];
 
     // Check if the message contains any of these phrases
@@ -626,15 +640,27 @@ For update order requests:
 
     const systemContent = lastSystemMessage.content.toLowerCase();
 
-    // Check if the last system message was providing order information (conclusion)
-    const wasProvidingOrderInfo =
-      systemContent.includes("pedido") &&
-      (systemContent.includes("número de seguimiento") ||
-        systemContent.includes("tracking number") ||
-        systemContent.includes("está en camino") ||
-        systemContent.includes("is on the way"));
+    // Check if the last system message was a conclusion to a previous request
+    const wasConcludingPreviousRequest =
+      // Check for closing phrases
+      systemContent.includes("que tengas") ||
+      systemContent.includes("have a great") ||
+      systemContent.includes("gracias") ||
+      systemContent.includes("thank you") ||
+      // Check if it was providing final information
+      (systemContent.includes("pedido") &&
+        (systemContent.includes("número de seguimiento") ||
+          systemContent.includes("tracking number"))) ||
+      (systemContent.includes("devolución") &&
+        systemContent.includes("procedimiento")) ||
+      (systemContent.includes("return") &&
+        systemContent.includes("procedure")) ||
+      (systemContent.includes("talla") &&
+        systemContent.includes("recomendación")) ||
+      (systemContent.includes("size") &&
+        systemContent.includes("recommendation"));
 
-    return containsNewRequestPhrase && wasProvidingOrderInfo;
+    return containsNewRequestPhrase && wasConcludingPreviousRequest;
   }
 
   private classifyNewRequest(classification: ClassifiedMessage) {
@@ -642,6 +668,24 @@ For update order requests:
       classification.parameters.order_number ||
       classification.parameters.email ||
       "";
+
+    // Reset all parameters for a new request
+    classification.parameters = {
+      order_number: "",
+      email: "",
+      product_handle: "",
+      new_delivery_info: "",
+      delivery_status: "",
+      tracking_number: "",
+      delivery_address_confirmed: false,
+      return_type: "",
+      returns_website_sent: false,
+      product_name: "",
+      size_query: "",
+      update_type: "",
+      height: "",
+      fit: "",
+    };
 
     // Check for order tracking intent
     if (
@@ -655,47 +699,48 @@ For update order requests:
     ) {
       classification.intent = "order_tracking";
     }
-
     // Check for returns/exchange intent
     else if (
       userMessage.toLowerCase().includes("devolver") ||
       userMessage.toLowerCase().includes("cambiar") ||
       userMessage.toLowerCase().includes("return") ||
-      userMessage.toLowerCase().includes("exchange")
+      userMessage.toLowerCase().includes("exchange") ||
+      userMessage.toLowerCase().includes("devolución") ||
+      userMessage.toLowerCase().includes("cambio")
     ) {
       classification.intent = "returns_exchange";
     }
-
     // Check for product sizing intent
     else if (
       userMessage.toLowerCase().includes("talla") ||
       userMessage.toLowerCase().includes("tamaño") ||
       userMessage.toLowerCase().includes("size") ||
-      userMessage.toLowerCase().includes("fit")
+      userMessage.toLowerCase().includes("fit") ||
+      userMessage.toLowerCase().includes("medida")
     ) {
       classification.intent = "product_sizing";
     }
-
     // Check for restock intent
     else if (
       userMessage.toLowerCase().includes("disponible") ||
       userMessage.toLowerCase().includes("stock") ||
       userMessage.toLowerCase().includes("available") ||
+      userMessage.toLowerCase().includes("cuando") ||
       userMessage.toLowerCase().includes("when")
     ) {
       classification.intent = "restock";
     }
-
     // Check for promo code intent
     else if (
       userMessage.toLowerCase().includes("descuento") ||
       userMessage.toLowerCase().includes("promo") ||
       userMessage.toLowerCase().includes("discount") ||
-      userMessage.toLowerCase().includes("offer")
+      userMessage.toLowerCase().includes("offer") ||
+      userMessage.toLowerCase().includes("código") ||
+      userMessage.toLowerCase().includes("code")
     ) {
       classification.intent = "promo_code";
     }
-
     // Check for invoice request intent
     else if (
       userMessage.toLowerCase().includes("factura") ||
@@ -703,39 +748,41 @@ For update order requests:
       userMessage.toLowerCase().includes("invoice") ||
       userMessage.toLowerCase().includes("receipt")
     ) {
-      classification.intent = "promo_code";
+      classification.intent = "invoice_request";
     }
-
     // Check for delivery issue intent
     else if (
       userMessage.toLowerCase().includes("no he recibido") ||
       userMessage.toLowerCase().includes("no llega") ||
       userMessage.toLowerCase().includes("haven't received") ||
-      userMessage.toLowerCase().includes("not arrived")
+      userMessage.toLowerCase().includes("not arrived") ||
+      userMessage.toLowerCase().includes("problema") ||
+      userMessage.toLowerCase().includes("problem")
     ) {
       classification.intent = "delivery_issue";
     }
-
     // Check for change delivery intent
     else if (
       userMessage.toLowerCase().includes("cambiar dirección") ||
       userMessage.toLowerCase().includes("nueva dirección") ||
       userMessage.toLowerCase().includes("change address") ||
-      userMessage.toLowerCase().includes("new address")
+      userMessage.toLowerCase().includes("new address") ||
+      userMessage.toLowerCase().includes("dirección") ||
+      userMessage.toLowerCase().includes("address")
     ) {
       classification.intent = "change_delivery";
     }
-
     // Check for update order intent
     else if (
       userMessage.toLowerCase().includes("actualizar pedido") ||
       userMessage.toLowerCase().includes("modificar pedido") ||
       userMessage.toLowerCase().includes("update order") ||
-      userMessage.toLowerCase().includes("modify order")
+      userMessage.toLowerCase().includes("modify order") ||
+      userMessage.toLowerCase().includes("cambiar pedido") ||
+      userMessage.toLowerCase().includes("change order")
     ) {
       classification.intent = "update_order";
     }
-
     // If we couldn't classify it specifically, but it mentions "order" or "pedido",
     // it's likely an order-related query
     else if (
@@ -743,6 +790,10 @@ For update order requests:
       userMessage.toLowerCase().includes("order")
     ) {
       classification.intent = "other-order";
+    }
+    // If none of the above, classify as other-general
+    else {
+      classification.intent = "other-general";
     }
   }
 

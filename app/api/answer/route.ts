@@ -36,14 +36,14 @@ const VALID_INTENTS = [
 // Conversation end responses in different languages
 const CONVERSATION_END_RESPONSES = {
   Spanish: [
-    "¡Gracias por contactar con Shameless Collective! Si necesitas algo más, no dudes en escribirnos. ¡Que tengas un día genial! 😊",
+    "¡Gracias a ti! Si necesitas algo más, no dudes en escribirnos. ¡Que tengas un buen día! 😊",
     "¡Un placer ayudarte! Si tienes más preguntas, aquí estaré. ¡Que tengas un día increíble! ✨",
-    "¡Perfecto! Me alegro de haber podido ayudarte. Si necesitas algo más, no dudes en contactarnos. ¡Hasta pronto! 👋",
-    "¡Genial! Me alegro de haber resuelto tu consulta. Si necesitas algo más, aquí estaré. ¡Que tengas un día estupendo! 🌟",
-    "¡Gracias por contactar con nosotros! Si necesitas más ayuda, no dudes en escribir. ¡Que tengas un día fantástico! 🎉",
+    "¡Perfecto! Me alegro de haber podido ayudarte. Si necesitas algo más, no dudes en contactarnos.",
+    "¡Genial! Me alegro de haber resuelto tu consulta. Si necesitas algo más, aquí estaré. ¡Que tengas un buen día! 🌟",
+    "¡Gracias por contactar con nosotros! Si necesitas más ayuda, no dudes en escribir. ¡Que tengas un buen día! 🎉",
   ],
   English: [
-    "Thank you for contacting Shameless Collective! If you need anything else, don't hesitate to reach out. Have a great day! 😊",
+    "Thank you! If you need anything else, don't hesitate to reach out. Have a great day! 😊",
     "It was a pleasure helping you! If you have any more questions, I'll be here. Have an amazing day! ✨",
     "Perfect! I'm glad I could help. If you need anything else, feel free to contact us. See you soon! 👋",
     "Great! I'm glad I could resolve your query. If you need anything else, I'll be here. Have a wonderful day! 🌟",
