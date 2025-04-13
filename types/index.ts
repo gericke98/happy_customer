@@ -3,6 +3,7 @@ export type Intent =
   | "order_tracking"
   | "product_inquiry"
   | "returns_exchange"
+  | "product_information"
   | "change_delivery"
   | "return_status"
   | "promo_code"

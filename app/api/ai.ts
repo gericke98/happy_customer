@@ -1000,6 +1000,14 @@ For update order requests:
   `
       : "Provide a concise response that directly addresses the customer's needs. If you don't have enough information, briefly ask for the specific details needed."
   }
+      ${
+        intent === "product_information"
+          ? `IMPORTANT: Since this is a 'product_information' intent:
+  - Extract the data from the shopifyData object
+  - Maintain continuity with any previous interactions
+  `
+          : "Provide a concise response that directly addresses the customer's needs. If you don't have enough information, briefly ask for the specific details needed."
+      }
   
   IMPORTANT GUIDELINES:
   - Do not include any introduction

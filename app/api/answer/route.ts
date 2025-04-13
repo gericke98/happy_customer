@@ -28,6 +28,7 @@ const VALID_INTENTS = [
   "delivery_issue",
   "conversation_end",
   "product_sizing",
+  "product_information",
   "update_order",
   "restock",
   "invoice_request",
