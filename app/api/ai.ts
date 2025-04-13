@@ -368,7 +368,15 @@ For update order requests:
      - Extract: product_name, product_size, height, fit, size_query (set to "true")
      - Normalize product_name to match active products: ${this.activeProducts.join(", ")}
 
-  6. RESTOCK:
+  6. PRODUCT INFORMATION:
+     - When user asks about product details, features, materials, or specifications
+     - English examples: "What material is this made of?", "Tell me about this product", "What are the features?", "Is this waterproof?", "What colors does this come in?", "Can you tell me more about this item?"
+     - Spanish examples: "¿De qué material está hecho?", "Cuéntame sobre este producto", "¿Cuáles son las características?", "¿Es impermeable?", "¿En qué colores viene?", "¿Me puedes contar más sobre este artículo?"
+     - Extract: product_name, product_type
+     - Normalize product_name to match active products: ${this.activeProducts.join(", ")}
+     - Look for keywords: material, features, specifications, details, information, características, especificaciones, detalles, información
+
+  7. RESTOCK:
      - When user asks about product availability or restocking
      - English examples: "When will this be back in stock?", "Do you know when you'll restock this?", "Will you have more of this soon?", "Is this coming back?", "When can I buy this again?"
      - Spanish examples: "¿Cuándo tendrán esto de nuevo?", "¿Saben cuándo repondrán esto?", "¿Tendrán más pronto?", "¿Volverá a estar disponible?", "¿Cuándo podré comprar esto de nuevo?"
@@ -382,39 +390,39 @@ For update order requests:
        * XL, xl -> "EXTRA LARGE"
        * XXL, xxl -> "EXTRA EXTRA LARGE"
 
-  7. PROMO CODE:
+  8. PROMO CODE:
      - When user asks about discounts, promotions, or offers
      - English examples: "Do you have any discounts?", "Are there any promotions?", "Can I get a discount code?", "Do you offer any sales?", "Is there a coupon I can use?", "Any special offers?"
      - Spanish examples: "¿Tienen descuentos?", "¿Hay promociones?", "¿Puedo obtener un código de descuento?", "¿Hacen rebajas?", "¿Hay algún cupón que pueda usar?", "¿Ofertas especiales?"
      - Extract: email
      - Look for keywords: discount, promo, offer, sale, descuento, promoción, oferta, rebajas
 
-  8. INVOICE REQUEST:
+  9. INVOICE REQUEST:
      - When user asks for an invoice, receipt, or billing document
      - English examples: "Can I get an invoice?", "I need a receipt", "Can you send me an invoice?", "I need a bill for my records", "Can you provide an invoice?"
      - Spanish examples: "¿Puedo obtener una factura?", "Necesito un recibo", "¿Me puedes enviar una factura?", "Necesito una factura para mis registros", "¿Puedes proporcionar una factura?"
      - Extract: order_number, email
      - Look for keywords: invoice, factura, receipt, recibo
 
-  9. UPDATE ORDER:
-     - When user wants to modify an existing order
-     - English examples: "I want to update my order", "Can I change my order?", "I need to modify my purchase", "Can you update my shipping?", "I want to change what I ordered"
-     - Spanish examples: "Quiero actualizar mi pedido", "¿Puedo cambiar mi pedido?", "Necesito modificar mi compra", "¿Puedes actualizar mi envío?", "Quiero cambiar lo que pedí"
-     - Extract: order_number, email, update_type (shipping_address or product)
+  10. UPDATE ORDER:
+      - When user wants to modify an existing order
+      - English examples: "I want to update my order", "Can I change my order?", "I need to modify my purchase", "Can you update my shipping?", "I want to change what I ordered"
+      - Spanish examples: "Quiero actualizar mi pedido", "¿Puedo cambiar mi pedido?", "Necesito modificar mi compra", "¿Puedes actualizar mi envío?", "Quiero cambiar lo que pedí"
+      - Extract: order_number, email, update_type (shipping_address or product)
 
-  10. CONVERSATION END:
+  11. CONVERSATION END:
       - When user expresses gratitude or satisfaction without further questions
       - English examples: "Thank you", "Thanks", "That's all", "Perfect", "Great, thanks", "That's helpful"
       - Spanish examples: "Gracias", "Perfecto", "Eso es todo", "Genial, gracias", "Me ha servido"
       - No parameters needed
 
-  11. OTHER-ORDER:
+  12. OTHER-ORDER:
       - For order-related queries that don't fit other intents
       - English examples: "What payment methods do you accept?", "Do you ship internationally?", "What's your shipping policy?", "How long does shipping take?"
       - Spanish examples: "¿Qué métodos de pago aceptan?", "¿Envían internacionalmente?", "¿Cuál es su política de envío?", "¿Cuánto tarda el envío?"
       - Extract relevant parameters if available
 
-  12. OTHER-GENERAL:
+  13. OTHER-GENERAL:
       - For non-order related queries
       - English examples: "What's your return policy?", "Do you have a physical store?", "What are your business hours?", "Tell me about your brand"
       - Spanish examples: "¿Cuál es su política de devolución?", "¿Tienen tienda física?", "¿Cuáles son sus horarios?", "Cuéntame sobre su marca"
@@ -422,7 +430,7 @@ For update order requests:
 
   Output ONLY a JSON object with the following structure:
   {
-    "intent": one of ["order_tracking", "returns_exchange", "change_delivery", "return_status", "promo_code", "other-order", "other-general", "delivery_issue", "conversation_end", "product_sizing", "update_order", "restock", "invoice_request"],
+    "intent": one of ["order_tracking", "returns_exchange", "change_delivery", "return_status", "promo_code", "other-order", "other-general", "delivery_issue", "conversation_end", "product_sizing", "update_order", "restock", "invoice_request", "product_information"],
     "parameters": {
       "order_number": "extracted order number or empty string",
       "email": "extracted email or empty string", 
@@ -434,6 +442,7 @@ For update order requests:
       "return_type": "return or exchange or empty string",
       "returns_website_sent": "true if returns website URL was already sent, false otherwise",
       "product_name": "name of product being asked about, 'not_found' if cannot be normalized, or empty string",
+      "product_type": "type of product being asked about or empty string",
       "product_size": "X-SMALL" | "SMALL" | "MEDIUM" | "LARGE" | "EXTRA LARGE" | "EXTRA EXTRA LARGE" | "not_found" | "",
       "size_query": "true if asking about sizing, empty string otherwise",
       "update_type": "shipping_address or product or empty string if not specified",
