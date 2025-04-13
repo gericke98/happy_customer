@@ -107,12 +107,14 @@ export type DiscountAllocation = {
 export type ShopifyData = {
   success: boolean;
   order: Order[];
+  product?: Product;
 };
 
 export type ShopifyDataTracking = {
   success: boolean;
   error?: "InvalidOrderNumber" | "EmailMismatch";
   order?: Order;
+  product?: Product;
 };
 
 export type ShopifyDataProduct = {
