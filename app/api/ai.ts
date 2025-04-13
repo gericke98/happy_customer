@@ -428,7 +428,22 @@ For update order requests:
 
   Output ONLY a JSON object with the following structure:
   {
-    "intent": one of ["order_tracking", "returns_exchange", "change_delivery", "return_status", "promo_code", "other-order", "other-general", "delivery_issue", "conversation_end", "product_sizing", "update_order", "restock", "invoice_request", "product_information"],
+    "intent": one of [
+    "order_tracking"
+    , "delivery_issue"
+    , "returns_exchange"
+    , "change_delivery"
+    , "product_sizing"
+    , "product_information"
+    , "restock"
+    , "promo_code"
+    , "invoice_request"
+    , "update_order"
+    , "conversation_end"
+    , "return_status"
+    , "other-order"
+    , "other-general"
+    ],
     "parameters": {
       "order_number": "extracted order number or empty string",
       "email": "extracted email or empty string", 
