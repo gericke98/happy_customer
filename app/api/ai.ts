@@ -366,14 +366,12 @@ For update order requests:
      - English examples: "What size should I get?", "How does this fit?", "What are the measurements?", "Is this true to size?", "I'm 180cm, what size do I need?", "Does this run small or large?"
      - Spanish examples: "¿Qué talla debo comprar?", "¿Cómo va de talla?", "¿Cuáles son las medidas?", "¿Es talla real?", "Mido 180cm, ¿qué talla necesito?", "¿Va pequeño o grande?"
      - Extract: product_name, product_size, height, fit, size_query (set to "true")
-     - Normalize product_name to match active products: ${this.activeProducts.join(", ")}
 
   6. PRODUCT INFORMATION:
      - When user asks about product details, features, materials, or specifications
      - English examples: "What material is this made of?", "Tell me about this product", "What are the features?", "Is this waterproof?", "What colors does this come in?", "Can you tell me more about this item?"
      - Spanish examples: "¿De qué material está hecho?", "Cuéntame sobre este producto", "¿Cuáles son las características?", "¿Es impermeable?", "¿En qué colores viene?", "¿Me puedes contar más sobre este artículo?"
      - Extract: product_name, product_type
-     - Normalize product_name to match active products: ${this.activeProducts.join(", ")}
      - Look for keywords: material, features, specifications, details, information, características, especificaciones, detalles, información
 
   7. RESTOCK:
@@ -441,7 +439,7 @@ For update order requests:
       "delivery_address_confirmed": "true if user explicitly confirms system's proposed address, false otherwise",
       "return_type": "return or exchange or empty string",
       "returns_website_sent": "true if returns website URL was already sent, false otherwise",
-      "product_name": "name of product being asked about, 'not_found' if cannot be normalized, or empty string",
+      "product_name": "name of product being asked about",
       "product_type": "type of product being asked about or empty string",
       "product_size": "X-SMALL" | "SMALL" | "MEDIUM" | "LARGE" | "EXTRA LARGE" | "EXTRA EXTRA LARGE" | "not_found" | "",
       "size_query": "true if asking about sizing, empty string otherwise",
