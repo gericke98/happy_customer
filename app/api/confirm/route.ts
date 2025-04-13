@@ -70,13 +70,16 @@ export async function POST(request: Request) {
 
     // Format response based on language
     const response = {
+      success: !!validationResult.formattedAddress,
       data: {
         formattedAddress: validationResult.formattedAddress,
         multipleCandidates: validationResult.multipleCandidates,
         addressCandidates: validationResult.addressCandidates,
-        validationStatus: validationResult.formattedAddress
-          ? "VALID"
-          : "INVALID",
+        validationStatus: validationResult.multipleCandidates
+          ? "MULTIPLE"
+          : validationResult.formattedAddress
+            ? "VALID"
+            : "INVALID",
       },
       metadata: {
         timestamp: new Date().toISOString(),
@@ -89,6 +92,7 @@ export async function POST(request: Request) {
     console.error("Error validating address:", error);
     return NextResponse.json(
       {
+        success: false,
         error: {
           message: "Failed to validate address",
           code: "VALIDATION_ERROR",
