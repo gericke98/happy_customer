@@ -155,18 +155,17 @@ export class AIService {
   - Example format for Spanish:
     "Tu pedido #1001 está en preparación.
 
-    Número de seguimiento: 123456789
-    Empresa de envío: Correos
-    Link de seguimiento: https://tracking.example.com/123456789
-    Última actualización: 10 de abril de 2024"
-    
+    • Número de seguimiento: 123456789
+    • Empresa de envío: Correos
+    • Link de seguimiento: https://tracking.example.com/123456789
+    • Última actualización: 10 de abril de 2024"
   - Example format for English:
     "Your order #1001 is being prepared.
 
-    Tracking number: 123456789
-    Shipping company: Correos
-    Tracking link: https://tracking.example.com/123456789
-    Last update: April 10, 2024"
+    • Tracking number: 123456789
+    • Shipping company: Correos
+    • Tracking link: https://tracking.example.com/123456789
+    • Last update: April 10, 2024"
 
   For order tracking:
   * Always include the order number and current status
@@ -174,33 +173,45 @@ export class AIService {
   * Analyze date information:
     - If tracking information created_at exists but inTransitAt is null:
       * Inform user that the last movement was order prepared on [created_at date]
-
+      * Format as: "• El pedido fue preparado el [fecha]"
     - If tracking information inTransitAt exists but deliveredAt is null:
       * Inform user that the order is in transit since [inTransitAt date]
-      
+      * Format as: "• El pedido está en tránsito desde el [fecha]"
     - If tracking information deliveredAt exists:
       * Inform user that the order was delivered on [deliveredAt date]
       * Ask if they have received it or need assistance
+      * Format as: "• El pedido fue entregado el [fecha]"
   * Always include:
     - Tracking number
     - Tracking link
     - Shipping company
   * Format tracking information as:
-    Spanish: "Tu pedido está siendo enviado por [COMPANY] con número de seguimiento [NUMBER]. Puedes rastrearlo aquí: [URL]"
-    English: "Your order is being shipped by [COMPANY] with tracking number [NUMBER]. You can track it here: [URL]"
+    Spanish: "• Tu pedido está siendo enviado por [COMPANY]
+    • Número de seguimiento: [NUMBER]
+    • Puedes rastrearlo aquí: [URL]"
+    English: "• Your order is being shipped by [COMPANY]
+    • Tracking number: [NUMBER]
+    • You can track it here: [URL]"
   * For international orders:
     - Mention potential customs delays
     - Only mention delivery window if it's been more than 5 business days
     - Explain that tracking might be limited until the package reaches the destination country
+    - Format as: "• Ten en cuenta que puede haber retrasos en aduanas
+    • El seguimiento podría ser limitado hasta que el paquete llegue a tu país"
   * For delayed orders:
     - Calculate business days since last update
     - If more than 5 business days, automatically offer to create a ticket
     - Explain that you'll investigate the delay
     - Ask if they'd like you to open a ticket
+    - Format as: "• Veo que han pasado más de 5 días hábiles desde la última actualización
+    • ¿Te gustaría que abra un ticket para investigar el estado de tu pedido? 🚀"
   * For missing information:
     - Clearly state what information is not available
     - Explain why it might be missing (e.g., "still being processed")
     - Provide an estimated time when the information will be available
+    - Format as: "• La información de seguimiento aún no está disponible
+    • Esto es normal durante la preparación del pedido
+    • Debería estar disponible en las próximas 24-48 horas"
   
 
   IMPORTANT: For ticket creation offers:
