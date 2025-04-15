@@ -77,6 +77,11 @@ export async function handleOrderTracking(
     parameters.days_since_update = businessDays;
     parameters.is_delayed = businessDays > 5;
 
+    // Add tracking information to parameters
+    if (order.fulfillments?.[0]) {
+      parameters.tracking_number = order.fulfillments[0].tracking_number || "";
+    }
+
     // Generate response using AI
     const response = await aiService.generateFinalAnswer(
       "order_tracking",

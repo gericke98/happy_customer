@@ -152,7 +152,6 @@ export class AIService {
     5. Last update date
   - Format the response in a clear, structured way with line breaks
   - If any information is missing, clearly state what is not available
-  - If the order has been in the same status for more than 5 business days, automatically offer to create a ticket
   - Example format for Spanish:
     "Tu pedido #1001 está en preparación.
 
@@ -160,6 +159,7 @@ export class AIService {
     Empresa de envío: Correos
     Link de seguimiento: https://tracking.example.com/123456789
     Última actualización: 10 de abril de 2024"
+    
   - Example format for English:
     "Your order #1001 is being prepared.
 
@@ -174,10 +174,10 @@ export class AIService {
   * Analyze date information:
     - If tracking information created_at exists but inTransitAt is null:
       * Inform user that the last movement was order prepared on [created_at date]
-      * Only mention processing time if it's been more than 5 business days
+
     - If tracking information inTransitAt exists but deliveredAt is null:
       * Inform user that the order is in transit since [inTransitAt date]
-      * Only mention delivery time if it's been more than 5 business days
+      
     - If tracking information deliveredAt exists:
       * Inform user that the order was delivered on [deliveredAt date]
       * Ask if they have received it or need assistance
@@ -201,14 +201,7 @@ export class AIService {
     - Clearly state what information is not available
     - Explain why it might be missing (e.g., "still being processed")
     - Provide an estimated time when the information will be available
-  * For multiple shipments:
-    - List each shipment separately
-    - Clearly identify which items are in each shipment
-    - Provide tracking information for each shipment
-  * For partial shipments:
-    - Clearly state which items have been shipped
-    - Mention which items are still pending
-    - Provide separate tracking information for each shipment
+  
 
   IMPORTANT: For ticket creation offers:
   - Only offer to create a ticket if:
@@ -1104,6 +1097,7 @@ export class AIService {
           estimatedDeliveryAt: order.fulfillments?.[0]?.estimatedDeliveryAt,
         };
         shopifyDataString = JSON.stringify(essentialData, null, 2);
+        console.log("shopifyDataString", shopifyDataString);
       } catch (error) {
         console.error("Error stringifying shopifyData:", error);
         shopifyDataString = "Error processing order data";
