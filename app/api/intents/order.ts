@@ -64,6 +64,16 @@ export async function handleOrderTracking(
         : "Sorry, I couldn't find information about your order.";
     }
 
+    // Check if order has been in the same status for more than 5 business days
+    const order = shopifyData.order;
+    const lastUpdate = order.fulfillments?.[0]?.created_at || order.created_at;
+    const lastUpdateDate = new Date(lastUpdate);
+    const today = new Date();
+    const businessDays = calculateBusinessDays(lastUpdateDate, today);
+
+    // Add delay information to parameters
+    parameters.delivery_status = businessDays > 5 ? "delayed" : "normal";
+
     // Generate response using AI
     const response = await aiService.generateFinalAnswer(
       "order_tracking",
@@ -89,6 +99,18 @@ export async function handleOrderTracking(
       language
     );
   }
+}
+
+// Helper function to calculate business days between two dates
+function calculateBusinessDays(startDate: Date, endDate: Date): number {
+  let count = 0;
+  const curDate = new Date(startDate.getTime());
+  while (curDate <= endDate) {
+    const dayOfWeek = curDate.getDay();
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) count++;
+    curDate.setDate(curDate.getDate() + 1);
+  }
+  return count;
 }
 
 export async function handleDeliveryIssue(
