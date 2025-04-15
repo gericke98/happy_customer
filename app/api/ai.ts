@@ -153,21 +153,21 @@ export class AIService {
   - Format the response in a clear, structured way with line breaks
   - If any information is missing, clearly state what is not available
   - If the order has been in the same status for more than 5 business days, automatically offer to create a ticket
-  * Check tracking status in shopifyData.fulfillments or essentialData object (inputted as additional context order)
+  * Check tracking status in additional context
   * Analyze date information:
-    - If essentialData.created_at exists but inTransitAt is null:
-      * Inform user that the last movement was order preparation on [created_at date]
+    - If tracking information created_at exists but inTransitAt is null:
+      * Inform user that the last movement was order prepared on [created_at date]
       * Mention that orders typically take 3-5 business days to be processed
-    - If essentialData.inTransitAt exists but deliveredAt is null:
+    - If tracking information inTransitAt exists but deliveredAt is null:
       * Inform user that the order is in transit since [inTransitAt date]
-      * Mention that delivery typically takes 3-5 business days from this point
-    - If essentialData.deliveredAt exists:
+      * Mention that delivery typically takes 2-4 business days from this point
+    - If tracking information deliveredAt exists:
       * Inform user that the order was delivered on [deliveredAt date]
       * Ask if they have received it or need assistance
   * Always include:
-    - Tracking number: essentialData.tracking_number
-    - Tracking link: essentialData.tracking_url
-    - Shipping company: essentialData.tracking_company
+    - Tracking number
+    - Tracking link
+    - Shipping company
   * Format tracking information as:
     Spanish: "Tu pedido está siendo enviado por [COMPANY] con número de seguimiento [NUMBER]. Puedes rastrearlo aquí: [URL]"
     English: "Your order is being shipped by [COMPANY] with tracking number [NUMBER]. You can track it here: [URL]"
