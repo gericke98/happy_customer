@@ -1153,7 +1153,6 @@ Estimated Delivery At: ${estimatedDeliveryAt}
   - Do not include any introduction
   - Do not use markdown formatting or smart bolding
   - When sharing links, provide them directly (e.g., "https://example.com" instead of "[Click here](https://example.com)")
-  - If user indicates waiting longer than 5 business days, inform them we will open a ticket to investigate
   - If user asks about sales duration, inform them you cannot disclose that information but there are very limited units available
   - Respond ONLY in ${language || "English"}`;
 
