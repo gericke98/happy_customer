@@ -71,8 +71,11 @@ export async function handleOrderTracking(
     const today = new Date();
     const businessDays = calculateBusinessDays(lastUpdateDate, today);
 
-    // Add delay information to parameters
+    // Add detailed delay information to parameters
     parameters.delivery_status = businessDays > 5 ? "delayed" : "normal";
+    parameters.last_update_date = lastUpdateDate.toISOString();
+    parameters.days_since_update = businessDays;
+    parameters.is_delayed = businessDays > 5;
 
     // Generate response using AI
     const response = await aiService.generateFinalAnswer(

@@ -43,6 +43,10 @@ export interface MessageParameters {
   height: string;
   weight: string;
   usual_size: string;
+
+  last_update_date: string;
+  days_since_update: number;
+  is_delayed: boolean;
 }
 
 export interface ClassifiedMessage {

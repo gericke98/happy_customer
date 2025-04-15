@@ -155,20 +155,18 @@ export class AIService {
   - If the order has been in the same status for more than 5 business days, automatically offer to create a ticket
   - Example format for Spanish:
     "Tu pedido #1001 está en preparación.
+
     Número de seguimiento: 123456789
     Empresa de envío: Correos
     Link de seguimiento: https://tracking.example.com/123456789
-    Última actualización: 10 de abril de 2024
-    
-    Veo que han pasado más de 5 días hábiles desde la última actualización. ¿Te gustaría que abra un ticket para investigar?"
+    Última actualización: 10 de abril de 2024"
   - Example format for English:
     "Your order #1001 is being prepared.
+
     Tracking number: 123456789
     Shipping company: Correos
     Tracking link: https://tracking.example.com/123456789
-    Last update: April 10, 2024
-    
-    I see it's been more than 5 business days since the last update. Would you like me to open a ticket to investigate?"
+    Last update: April 10, 2024"
 
   For order tracking:
   * Always include the order number and current status
@@ -211,6 +209,21 @@ export class AIService {
     - Clearly state which items have been shipped
     - Mention which items are still pending
     - Provide separate tracking information for each shipment
+
+  IMPORTANT: For ticket creation offers:
+  - Only offer to create a ticket if:
+    * More than 5 business days have passed since the last update
+    * The order status hasn't changed in more than 5 business days
+    * The user explicitly asks about delays
+  - Do NOT offer to create a ticket if:
+    * Less than 5 business days have passed
+    * The order is within normal processing/delivery times
+    * The user hasn't expressed concern about delays
+  - When checking dates:
+    * Compare the last update date with today's date
+    * Only count business days (Monday to Friday)
+    * If today is the same day as the last update, do NOT offer to create a ticket
+    * If less than 5 business days have passed, do NOT offer to create a ticket
 
   For product sizing inquiries:
   * Use ONLY the provided size chart data for measurements
