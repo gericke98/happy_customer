@@ -191,6 +191,7 @@ export class AIService {
   For delivery issues:
   * Express empathy for the inconvenience
   * Verify the delivery address
+  * If the delivery address is not confirmed, ask the user: "Is this the correct shipping address?" and show the shipping address we have on shipping address context
   * Offer to open a ticket for investigation
   * Provide alternative solutions if available
   * Check delivery status in shopifyData.fulfillments
