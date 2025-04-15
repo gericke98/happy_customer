@@ -66,7 +66,7 @@ export async function handleOrderTracking(
 
     // Check if order has been in the same status for more than 5 business days
     const order = shopifyData.order;
-    const lastUpdate = order.fulfillments?.[0]?.created_at || order.created_at;
+    const lastUpdate = order.fulfillments?.[0]?.createdAt || order.created_at;
     const lastUpdateDate = new Date(lastUpdate);
     const today = new Date();
     const businessDays = calculateBusinessDays(lastUpdateDate, today);
@@ -79,7 +79,8 @@ export async function handleOrderTracking(
 
     // Add tracking information to parameters
     if (order.fulfillments?.[0]) {
-      parameters.tracking_number = order.fulfillments[0].tracking_number || "";
+      parameters.tracking_number =
+        order.fulfillments[0].trackingInfo[0].number || "";
     }
 
     // Generate response using AI
@@ -305,9 +306,9 @@ export async function handleChangeDelivery(
               order.admin_graphql_api_id,
               addressValidation.formattedAddress,
               {
-                first_name: order.shipping_address.first_name || "",
-                last_name: order.shipping_address.last_name || "",
-                phone: order.shipping_address.phone || "",
+                first_name: order.shippingAddress.first_name || "",
+                last_name: order.shippingAddress.last_name || "",
+                phone: order.shippingAddress.phone || "",
               }
             );
             logger.info("Successfully updated shipping address", {
@@ -372,7 +373,7 @@ async function handleShippedOrderAddressChange(
 
     const callPrompt = `Eres una persona llamada Silvia. Estás llamando a una empresa de envíos para modificar la dirección de envío de tu paquete. Responde en 3 a 7 oraciones en la mayoría de los casos.
             Si te pregunta, aquí tienes información adicional sobre el pedido: 
-            - Número de seguimiento ${order.fulfillments[0].tracking_number}
+            - Número de seguimiento ${order.fulfillments[0].trackingInfo[0].number}
             - Nueva dirección de entrega: ${newAddress}
             Actúa como el cliente y no como un agente, es decir, la persona a la que llamas te tiene que dar la solución, tú no le tienes que ayudar en resolver sus problemas.`;
 
