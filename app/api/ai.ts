@@ -1052,8 +1052,8 @@ export class AIService {
           inTransitAt: order.fulfillments?.[0]?.inTransitAt,
           deliveredAt: order.fulfillments?.[0]?.deliveredAt,
           estimatedDeliveryAt: order.fulfillments?.[0]?.estimatedDeliveryAt,
-          shippingAddress: order.shipping_address,
         };
+        console.log("essentialData", essentialData);
         shopifyDataString = JSON.stringify(essentialData, null, 2);
         console.log("shopifyDataString", shopifyDataString);
       } catch (error) {
