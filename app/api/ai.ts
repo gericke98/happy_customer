@@ -1045,10 +1045,10 @@ export class AIService {
         const essentialData = {
           order_number: order.name,
           status: order.fulfillments?.[0]?.status,
-          tracking_number: order.fulfillments?.[0]?.tracking_number,
-          shipping_address: order.shipping_address,
-          created_at: order.fulfillments?.[0]?.created_at,
-          shipment_status: order.fulfillments?.[0]?.shipment_status,
+          tracking_number: order.fulfillments?.[0]?.trackingInfo[0].number,
+          shipping_address: order.shippingAddress,
+          created_at: order.fulfillments?.[0]?.createdAt,
+          displayStatus: order.fulfillments?.[0]?.displayStatus,
           inTransitAt: order.fulfillments?.[0]?.inTransitAt,
           deliveredAt: order.fulfillments?.[0]?.deliveredAt,
           estimatedDeliveryAt: order.fulfillments?.[0]?.estimatedDeliveryAt,
@@ -1092,15 +1092,16 @@ ${(() => {
     return "No tracking information available yet.";
   }
 
-  const trackingNumber = fulfillment.tracking_number || "Not available";
-  const shipmentStatus = fulfillment.shipment_status || "Pending";
-  const trackingUrl = fulfillment.tracking_url || "Not available";
-  const lastUpdate = fulfillment.created_at;
-  const shipment_status = fulfillment.shipment_status;
+  const trackingNumber =
+    fulfillment.trackingInfo?.[0]?.number || "Not available";
+  const shipmentStatus = fulfillment.displayStatus || "Pending";
+  const trackingUrl = fulfillment.trackingInfo?.[0]?.url || "Not available";
+  const lastUpdate = fulfillment.createdAt;
+  const shipment_status = fulfillment.displayStatus;
   const inTransitAt = fulfillment.inTransitAt;
   const deliveredAt = fulfillment.deliveredAt;
   const estimatedDeliveryAt = fulfillment.estimatedDeliveryAt
-    ? new Date(fulfillment.created_at).toLocaleDateString()
+    ? new Date(fulfillment.createdAt).toLocaleDateString()
     : "Not available";
 
   return `Tracking Number: ${trackingNumber}
@@ -1122,9 +1123,9 @@ $${(() => {
         const order = Array.isArray(shopifyData.order)
           ? shopifyData.order[0]
           : shopifyData.order;
-        const shippingAddress = order?.shipping_address;
+        const shippingAddress = order?.shippingAddress;
         if (shippingAddress) {
-          return `\n**${shippingAddress.address1 || ""}, ${shippingAddress.zip || ""} ${shippingAddress.city || ""}, ${shippingAddress.province || ""}, ${shippingAddress.country || ""}**\n`;
+          return `\n**${shippingAddress.address1 || ""}${shippingAddress.address2 ? ", " + shippingAddress.address2 : ""}, ${shippingAddress.zip || ""} ${shippingAddress.city || ""}, ${shippingAddress.province || ""}, ${shippingAddress.country || ""}**\n`;
         }
         return "No shipping address available.";
       }

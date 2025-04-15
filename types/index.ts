@@ -41,18 +41,22 @@ export type ClassifiedMessage = {
 export type OrderFulfillment = {
   id: number;
   admin_graphql_api_id: string;
-  created_at: string;
+  createdAt: string;
   location_id: number;
   name: string;
   order_id: number;
-  shipment_status: string;
+  displayStatus: string;
   status: string;
-  tracking_company: string;
-  tracking_number: string;
-  tracking_url: string;
+  trackingInfo: TrackingInfo[];
   inTransitAt: string;
   deliveredAt: string;
   estimatedDeliveryAt: string;
+};
+
+export type TrackingInfo = {
+  number: string;
+  url: string;
+  company: string;
 };
 
 export type Address = {
@@ -76,7 +80,7 @@ export type Order = {
   subtotal_price: string;
   contact_email: string;
   admin_graphql_api_id: string;
-  shipping_address: Address;
+  shippingAddress: Address;
   billing_address: Address;
   line_items: OrderLineItem[];
   total_price: string;
