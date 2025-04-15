@@ -1103,19 +1103,19 @@ ${(() => {
     : "Not available";
 
   return `Tracking Number: ${trackingNumber}
-Tracking Status: ${shipmentStatus}
-Tracking Link: ${trackingUrl}
-Last Update: ${lastUpdate}
-Shipment Status: ${shipment_status}
-In Transit At: ${inTransitAt}
-Delivered At: ${deliveredAt}
-Estimated Delivery At: ${estimatedDeliveryAt}
-`;
+          Tracking Status: ${shipmentStatus}
+          Tracking Link: ${trackingUrl}
+          Last Update: ${lastUpdate}
+          Shipment Status: ${shipment_status}
+          In Transit At: ${inTransitAt}
+          Delivered At: ${deliveredAt}
+          Estimated Delivery At: ${estimatedDeliveryAt}
+          `;
 })()}
 `
     : "No order data available."
 }
-Shipping Details: 
+IMPORTANT: For delivery_issue intent, use the following shipping Details: 
 ${
   shopifyData?.success && shopifyData?.order
     ? `
