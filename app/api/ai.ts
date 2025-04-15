@@ -180,36 +180,13 @@ export class AIService {
     English: "• Your order is being shipped by **[COMPANY]**\n\n• **Tracking number:** [NUMBER]\n\n• You can track it here: **[URL]**"
   * For international orders:
     - Mention potential customs delays
-    - Only mention delivery window if it's been more than 5 business days
     - Explain that tracking might be limited until the package reaches the destination country
     - Format as: "• Ten en cuenta que puede haber **retrasos en aduanas**\n\n• El seguimiento podría ser **limitado** hasta que el paquete llegue a tu país"
-  * For delayed orders:
-    - Calculate business days since last update
-    - If more than 5 business days, automatically offer to create a ticket
-    - Explain that you'll investigate the delay
-    - Ask if they'd like you to open a ticket
-    - Format as: "• Veo que han pasado **más de 5 días hábiles** desde la última actualización\n\n• ¿Te gustaría que abra un **ticket** para investigar el estado de tu pedido? 🚀"
   * For missing information:
     - Clearly state what information is not available
     - Explain why it might be missing (e.g., "still being processed")
     - Provide an estimated time when the information will be available
     - Format as: "• La información de seguimiento **aún no está disponible**\n\n• Esto es normal durante la **preparación del pedido**\n\n• Debería estar disponible en las **próximas 24-48 horas**"
-  
-
-  IMPORTANT: For ticket creation offers:
-  - Only offer to create a ticket if:
-    * More than 5 business days have passed since the last update
-    * The order status hasn't changed in more than 5 business days
-    * The user explicitly asks about delays
-  - Do NOT offer to create a ticket if:
-    * Less than 5 business days have passed
-    * The order is within normal processing/delivery times
-    * The user hasn't expressed concern about delays
-  - When checking dates:
-    * Compare the last update date with today's date
-    * Only count business days (Monday to Friday)
-    * If today is the same day as the last update, do NOT offer to create a ticket
-    * If less than 5 business days have passed, do NOT offer to create a ticket
 
   For product sizing inquiries:
   * Use ONLY the provided size chart data for measurements
