@@ -167,6 +167,20 @@ For order tracking:
 * If order is delayed, offer to open a ticket
 * For international orders, mention potential customs delays
 * Check tracking status in shopifyData.fulfillments or essentialData object
+* Analyze date information:
+  - If essentialData.created_at exists but inTransitAt is null:
+    * Inform user that the last movement was order preparation on [created_at date]
+  - If essentialData.inTransitAt exists but deliveredAt is null:
+    * Inform user that the order is in transit since [inTransitAt date]
+  - If essentialData.deliveredAt exists:
+    * Inform user that the order was delivered on [deliveredAt date]
+* Always include:
+  - Tracking number: essentialData.tracking_number
+  - Tracking link: essentialData.tracking_url
+  - Shipping company: essentialData.tracking_company
+* Format tracking information as:
+  Spanish: "Tu pedido está siendo enviado por [COMPANY] con número de seguimiento [NUMBER]. Puedes rastrearlo aquí: [URL]"
+  English: "Your order is being shipped by [COMPANY] with tracking number [NUMBER]. You can track it here: [URL]"
 
 For returns/exchanges:
 * Mention the returns window (typically 14-30 days)
@@ -1066,7 +1080,6 @@ Data usage:
   - Do not include any introduction
   - Do not use markdown formatting or smart bolding
   - When sharing links, provide them directly (e.g., "https://example.com" instead of "[Click here](https://example.com)")
-  - If user asks about delivery times, inform them normal delivery time is 3-5 business days
   - If user indicates waiting longer than 5 business days, inform them we will open a ticket to investigate
   - If user asks about sales duration, inform them you cannot disclose that information but there are very limited units available
   - Respond ONLY in ${language || "English"}`;
