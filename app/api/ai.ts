@@ -1111,14 +1111,23 @@ ${(() => {
   const trackingNumber = fulfillment.tracking_number || "Not available";
   const shipmentStatus = fulfillment.shipment_status || "Pending";
   const trackingUrl = fulfillment.tracking_url || "Not available";
-  const lastUpdate = fulfillment.created_at
+  const lastUpdate = fulfillment.created_at;
+  const shipment_status = fulfillment.shipment_status;
+  const inTransitAt = fulfillment.inTransitAt;
+  const deliveredAt = fulfillment.deliveredAt;
+  const estimatedDeliveryAt = fulfillment.estimatedDeliveryAt
     ? new Date(fulfillment.created_at).toLocaleDateString()
     : "Not available";
 
   return `Tracking Number: ${trackingNumber}
 Tracking Status: ${shipmentStatus}
 Tracking Link: ${trackingUrl}
-Last Update: ${lastUpdate}`;
+Last Update: ${lastUpdate}
+Shipment Status: ${shipment_status}
+In Transit At: ${inTransitAt}
+Delivered At: ${deliveredAt}
+Estimated Delivery At: ${estimatedDeliveryAt}
+`;
 })()}
 `
     : "No order data available."
