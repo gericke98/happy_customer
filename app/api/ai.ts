@@ -1041,7 +1041,7 @@ export class AIService {
         const order = Array.isArray(shopifyData.order)
           ? shopifyData.order[0]
           : shopifyData.order;
-
+        console.log("order", order);
         const essentialData = {
           order_number: order.name,
           status: order.fulfillments?.[0]?.status,
@@ -1117,13 +1117,19 @@ ${(() => {
     : "No order data available."
 }
 IMPORTANT: For delivery_issue intent, use the following shipping Details: 
-${
-  shopifyData?.success && shopifyData?.order
-    ? `
-${JSON.stringify(Array.isArray(shopifyData.order) ? shopifyData.order[0]?.shipping_address : shopifyData.order?.shipping_address, null, 2)}
-`
-    : "No shipping address available."
-}
+$${(() => {
+      if (shopifyData?.success && shopifyData?.order) {
+        const order = Array.isArray(shopifyData.order)
+          ? shopifyData.order[0]
+          : shopifyData.order;
+        const shippingAddress = order?.shipping_address;
+        if (shippingAddress) {
+          return `\n**${shippingAddress.address1 || ""}, ${shippingAddress.zip || ""} ${shippingAddress.city || ""}, ${shippingAddress.province || ""}, ${shippingAddress.country || ""}**\n`;
+        }
+        return "No shipping address available.";
+      }
+      return "No shipping address available.";
+    })()}
   
   ${
     intent === "other-order"
