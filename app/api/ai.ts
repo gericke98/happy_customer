@@ -1055,7 +1055,6 @@ export class AIService {
           tracking_number: order.fulfillments?.[0]?.trackingInfo[0].number,
           shipping_address: order.shippingAddress,
           created_at: order.fulfillments?.[0]?.createdAt,
-          displayStatus: order.fulfillments?.[0]?.displayStatus,
           inTransitAt: order.fulfillments?.[0]?.inTransitAt,
           deliveredAt: order.fulfillments?.[0]?.deliveredAt,
           estimatedDeliveryAt: order.fulfillments?.[0]?.estimatedDeliveryAt,
@@ -1101,10 +1100,8 @@ ${(() => {
 
   const trackingNumber =
     fulfillment.trackingInfo?.[0]?.number || "Not available";
-  const shipmentStatus = fulfillment.displayStatus || "Pending";
   const trackingUrl = fulfillment.trackingInfo?.[0]?.url || "Not available";
   const lastUpdate = fulfillment.createdAt;
-  const shipment_status = fulfillment.displayStatus;
   const inTransitAt = fulfillment.inTransitAt;
   const deliveredAt = fulfillment.deliveredAt;
   const estimatedDeliveryAt = fulfillment.estimatedDeliveryAt
@@ -1112,10 +1109,8 @@ ${(() => {
     : "Not available";
 
   return `Tracking Number: ${trackingNumber}
-          Tracking Status: ${shipmentStatus}
           Tracking Link: ${trackingUrl}
           Last Update: ${lastUpdate}
-          Shipment Status: ${shipment_status}
           In Transit At: ${inTransitAt}
           Delivered At: ${deliveredAt}
           Estimated Delivery At: ${estimatedDeliveryAt}
