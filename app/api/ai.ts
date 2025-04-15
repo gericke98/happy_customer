@@ -149,29 +149,10 @@ export class AIService {
     2. Tracking number (if available)
     3. Shipping company (if available)
     4. Tracking link (if available)
-    5. Last update date
+    5. Last update date and concept
   - Format the response in a clear, structured way with line breaks
   - If any information is missing, clearly state what is not available
   - If the order has been in the same status for more than 5 business days, automatically offer to create a ticket
-  - Example format for Spanish:
-    "Tu pedido #1001 está en preparación.
-    Número de seguimiento: 123456789
-    Empresa de envío: Correos
-    Link de seguimiento: https://tracking.example.com/123456789
-    Última actualización: 10 de abril de 2024
-    
-    Veo que han pasado más de 5 días hábiles desde la última actualización. ¿Te gustaría que abra un ticket para investigar?"
-  - Example format for English:
-    "Your order #1001 is being prepared.
-    Tracking number: 123456789
-    Shipping company: Correos
-    Tracking link: https://tracking.example.com/123456789
-    Last update: April 10, 2024
-    
-    I see it's been more than 5 business days since the last update. Would you like me to open a ticket to investigate?"
-
-  For order tracking:
-  * Always include the order number and current status
   * Check tracking status in shopifyData.fulfillments or essentialData object (inputted as additional context order)
   * Analyze date information:
     - If essentialData.created_at exists but inTransitAt is null:
