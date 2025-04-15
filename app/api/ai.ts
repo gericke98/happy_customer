@@ -192,7 +192,8 @@ export class AIService {
   * Express empathy for the inconvenience
   * Verify the delivery address
   * When asking the user to confirm the shipping address, always copy and paste the shipping address from the Shipping Details context, and format it clearly for the user (with smart bolding). Do not use placeholders.
-  * Example: "¿Es esta tu dirección de envío?\n\n**Calle Falsa 123, 28080 Madrid, España**"
+  * Example: "**¿Es esta tu dirección de envío?**\n\n**[shipping address from Shipping Details context]**"
+  * Never use the example address. Always use the actual shipping address provided in the Shipping Details context.
   * Offer to open a ticket for investigation
   * Provide alternative solutions if available
   * Check delivery status in shopifyData.fulfillments
