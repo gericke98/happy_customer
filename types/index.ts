@@ -50,6 +50,9 @@ export type OrderFulfillment = {
   tracking_company: string;
   tracking_number: string;
   tracking_url: string;
+  inTransitAt: string;
+  deliveredAt: string;
+  estimatedDeliveryAt: string;
 };
 
 export type Address = {
