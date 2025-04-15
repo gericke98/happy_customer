@@ -1080,30 +1080,49 @@ export class AIService {
 
     const systemPrompt = `${this.SYSTEM_PROMPTS.FINAL_ANSWER}
   
-  Based on the classified intent "${intent}" and the following data:
+  Based on the classified intent: "${intent}"
+  Using the following data:
+
   ${JSON.stringify(parameters, null, 2)}
   ${sizeCharts ? `\nSize Chart Data:\n${sizeCharts}` : ""}
   
   User last message:
-  ${sanitizedUserMessage}
+${sanitizedUserMessage}
 
-  Additional Context:
-  ${
-    sanitizedContext?.length
-      ? `\n${sanitizedContext.map((msg) => msg.content).join("\n")}`
-      : ""
+${sanitizedContext?.length ? `Conversation Context:\n${sanitizedContext.map((msg) => msg.content).join("\n")}` : ""}
+
+${
+  shopifyData?.success && shopifyData?.order
+    ? `
+Order Details:
+${shopifyDataString}
+
+Tracking Details: 
+${(() => {
+  const order = Array.isArray(shopifyData.order)
+    ? shopifyData.order[0]
+    : shopifyData.order;
+  const fulfillment = order?.fulfillments?.[0];
+
+  if (!fulfillment) {
+    return "No tracking information available yet.";
   }
-  ${
-    shopifyData?.success && shopifyData?.order
-      ? `\nOrder Details:\n${shopifyDataString}\n\nTracking Status: ${
-          Array.isArray(shopifyData.order)
-            ? shopifyData.order[0]?.fulfillments?.length === 0
-            : shopifyData.order?.fulfillments?.length === 0
-              ? "Order is still being prepared"
-              : "Tracking available in fulfillments array"
-        }`
-      : ""
-  }
+
+  const trackingNumber = fulfillment.tracking_number || "Not available";
+  const shipmentStatus = fulfillment.shipment_status || "Pending";
+  const trackingUrl = fulfillment.tracking_url || "Not available";
+  const lastUpdate = fulfillment.created_at
+    ? new Date(fulfillment.created_at).toLocaleDateString()
+    : "Not available";
+
+  return `Tracking Number: ${trackingNumber}
+Tracking Status: ${shipmentStatus}
+Tracking Link: ${trackingUrl}
+Last Update: ${lastUpdate}`;
+})()}
+`
+    : "No order data available."
+}
   
   ${
     intent === "other-order"
