@@ -153,9 +153,9 @@ export class AIService {
   - Format the response in a clear, structured way with line breaks
   - If any information is missing, clearly state what is not available
   - Example format for Spanish:
-    "Tu pedido **#1001** está en **preparación**.\n\n• **Número de seguimiento:** 123456789\n\n• **Empresa de envío:** Correos\n\n• **Link de seguimiento:** https://tracking.example.com/123456789\n\n• **Última actualización:** 10 de abril de 2024"
+    "Tu pedido **#1001** está en **tránsito**.\n\n• **Número de seguimiento:** 123456789\n\n• **Empresa de envío:** Correos\n\n• **Link de seguimiento:** https://tracking.example.com/123456789\n\n• **Última actualización:** 10 de abril de 2024"
   - Example format for English:
-    "Your order **#1001** is being **prepared**.\n\n• **Tracking number:** 123456789\n\n• **Shipping company:** Correos\n\n• **Tracking link:** https://tracking.example.com/123456789\n\n• **Last update:** April 10, 2024"
+    "Your order **#1001** is being **sent**.\n\n• **Tracking number:** 123456789\n\n• **Shipping company:** Correos\n\n• **Tracking link:** https://tracking.example.com/123456789\n\n• **Last update:** April 10, 2024"
 
   For order tracking:
   * Always include the order number and current status
