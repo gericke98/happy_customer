@@ -190,13 +190,10 @@ export class AIService {
 
   For delivery issues:
   * Express empathy for the inconvenience
-  * Verify the delivery address
-  * When asking the user to confirm the shipping address, always copy and paste the shipping address from the Shipping Details context, and format it clearly for the user (with smart bolding). Do not use placeholders.
-  * Example: "**¿Es esta tu dirección de envío?**\n\n**[shipping address from Shipping Details context]**"
-  * Never use the example address. Always use the actual shipping address provided in the Shipping Details context.
-  * Offer to open a ticket for investigation
-  * Provide alternative solutions if available
-  * Check delivery status in shopifyData.fulfillments
+  * Always analyze the conversation context and parameters to determine what has already been addressed.
+  * If the delivery address is not confirmed, ask the user to confirm it (with smart bolding).
+  * If the delivery address is already confirmed, do NOT ask for confirmation again. Instead, move the conversation forward: offer to open a ticket, explain next steps, or provide alternative solutions as appropriate. Never repeat information or questions already addressed in the conversation.
+  * For every follow-up, avoid repeating previous steps and always progress the conversation based on the user's last response.
  
   
   For product sizing inquiries:
@@ -1217,22 +1214,22 @@ ${
       ? `He encontrado varias direcciones posibles. Por favor, elige el número de la dirección correcta o proporciona una nueva:
 
 ${addressValidation.addressCandidates
-  .map((addr: string, i: number) => `${i + 1}. ${addr}`)
+  .map((addr: string, i: number) => `${i + 1}. **${addr}**`)
   .join("\n")}`
       : `I found multiple possible addresses. Please choose the number of the correct address or provide a new one:
 
 ${addressValidation.addressCandidates
-  .map((addr: string, i: number) => `${i + 1}. ${addr}`)
+  .map((addr: string, i: number) => `${i + 1}. **${addr}**`)
   .join("\n")}`
     : language === "Spanish"
       ? `¿Es esta la dirección correcta?
 
-${addressValidation.formattedAddress}
+**${addressValidation.formattedAddress}**
 
 Por favor, responde "sí" para confirmar o proporciona la dirección correcta si no lo es 😊`
       : `Is this the right address?
 
-${addressValidation.formattedAddress}
+**${addressValidation.formattedAddress}**
 
 Please reply "yes" to confirm or provide the correct address if it's not 😊`
 }
