@@ -188,6 +188,14 @@ export class AIService {
     - Provide an estimated time when the information will be available
     - Format as: "• La información de seguimiento **aún no está disponible**\n\n• Esto es normal durante la **preparación del pedido**\n\n• Debería estar disponible en las **próximas 24-48 horas**"
 
+  For delivery issues:
+  * Express empathy for the inconvenience
+  * Verify the delivery address
+  * Offer to open a ticket for investigation
+  * Provide alternative solutions if available
+  * Check delivery status in shopifyData.fulfillments
+ 
+  
   For product sizing inquiries:
   * Use ONLY the provided size chart data for measurements
   * Consider:
@@ -206,25 +214,6 @@ export class AIService {
   * Be honest about product limitations
   * Suggest similar products if the requested one is not available
 
-  For order tracking:
-  * Always mention the order number and tracking status
-  * If order is delayed, offer to open a ticket
-  * For international orders, mention potential customs delays
-  * Check tracking status in shopifyData.fulfillments or essentialData object (inputted as additional context order)
-  * Analyze date information:
-    - If essentialData.created_at exists but inTransitAt is null:
-      * Inform user that the last movement was order preparation on [created_at date]
-    - If essentialData.inTransitAt exists but deliveredAt is null:
-      * Inform user that the order is in transit since [inTransitAt date]
-    - If essentialData.deliveredAt exists:
-      * Inform user that the order was delivered on [deliveredAt date]
-  * Always include:
-    - Tracking number: essentialData.tracking_number
-    - Tracking link: essentialData.tracking_url
-    - Shipping company: essentialData.tracking_company
-  * Format tracking information as:
-    Spanish: "Tu pedido está siendo enviado por [COMPANY] con número de seguimiento [NUMBER]. Puedes rastrearlo aquí: [URL]"
-    English: "Your order is being shipped by [COMPANY] with tracking number [NUMBER]. You can track it here: [URL]"
 
   For returns/exchanges:
   * Mention the returns window (typically 14-30 days)
@@ -232,13 +221,6 @@ export class AIService {
   * Mention any restocking fees if applicable
   * Explain the refund process and timeline
   * Include the returns portal URL if not already sent
-
-  For delivery issues:
-  * Express empathy for the inconvenience
-  * Verify the delivery address
-  * Offer to open a ticket for investigation
-  * Provide alternative solutions if available
-  * Check delivery status in shopifyData.fulfillments
 
   For promo codes:
   * Explain current promotions if available
@@ -1065,6 +1047,7 @@ export class AIService {
           inTransitAt: order.fulfillments?.[0]?.inTransitAt,
           deliveredAt: order.fulfillments?.[0]?.deliveredAt,
           estimatedDeliveryAt: order.fulfillments?.[0]?.estimatedDeliveryAt,
+          shippingAddress: order.shipping_address,
         };
         shopifyDataString = JSON.stringify(essentialData, null, 2);
         console.log("shopifyDataString", shopifyDataString);
@@ -1127,6 +1110,14 @@ Estimated Delivery At: ${estimatedDeliveryAt}
 })()}
 `
     : "No order data available."
+}
+Shipping Details: 
+${
+  shopifyData?.success && shopifyData?.order
+    ? `
+${JSON.stringify(Array.isArray(shopifyData.order) ? shopifyData.order[0]?.shipping_address : shopifyData.order?.shipping_address, null, 2)}
+`
+    : "No shipping address available."
 }
   
   ${
